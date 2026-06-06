@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Smart Career VAI</title>
+
+<link rel="stylesheet" href="style.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+</head>
+
+<body>
+
+<!-- AUTH SECTION -->
+
+<div id="authSection" class="auth-box glass-effect">
+
+    <div class="auth-content">
+
+        <h1>Smart Career VAI</h1>
+
+        <p class="welcome-text">
+            🚀 Create a Professional Job-Winning CV in Minutes
+        </p>
+
+        <p id="authMessage" class="auth-message">Please sign in or register to use the Smart Career VAI tools.</p>
+
+        <div class="auth-inputs">
+
+            <input type="email" id="authEmail" placeholder="Enter Email">
+
+            <input type="password" id="authPassword" placeholder="Enter Password">
+
+            <input type="text" id="careerField" placeholder="Career / Profession" class="hidden">
+
+        </div>
+
+        <div class="auth-buttons">
+
+            <button id="primaryAuthBtn" class="login-btn">
+                Login
+            </button>
+
+        </div>
+
+        <p id="authToggleText" class="auth-toggle">Don't have an account? Sign up</p>
+
+    </div>
+
+</div>
+
+<!-- MAIN APP -->
+
+<div id="appSection" class="hidden fade-in-app">
+
+    <div class="container">
+
+        <!-- LEFT SIDE -->
+
+        <div class="left">
+
+            <div class="top-bar">
+
+                <div>
+                    <h1>Smart Career VAI</h1>
+                    <p id="userStatus" class="user-status"></p>
+                </div>
+
+                <button id="logoutBtn" class="logout-btn">
+                    Logout
+                </button>
+
+            </div>
+
+            <p class="subtitle">
+                🚀 AI-powered professional CVs and cover letters for modern careers.
+            </p>
+
+            <!-- PERSONAL INFO -->
+
+            <div class="card">
+
+                <h2>Personal Information</h2>
+
+                <input type="text" id="fullName" placeholder="Full Name">
+
+                <input type="text" id="jobTarget" placeholder="Target Job Position">
+
+                <input type="email" id="email" placeholder="Email">
+
+                <input type="text" id="phone" placeholder="Phone Number">
+
+            </div>
+
+            <!-- SUMMARY -->
+
+            <div class="card">
+
+                <h2>Professional Summary</h2>
+
+                <textarea id="summary" placeholder="Professional Summary"></textarea>
+
+            </div>
+
+            <!-- SKILLS -->
+
+            <div class="card">
+
+                <h2>Skills</h2>
+
+                <textarea id="skills" placeholder="Skills"></textarea>
+
+            </div>
+
+            <!-- EDUCATION -->
+
+            <div class="card">
+
+                <h2>Education</h2>
+
+                <textarea id="education" placeholder="Education"></textarea>
+
+            </div>
+
+            <!-- QUALIFICATIONS -->
+
+            <div class="card">
+
+                <h2>Qualifications</h2>
+
+                <textarea id="qualifications" placeholder="Qualifications"></textarea>
+
+            </div>
+
+            <!-- DOCUMENTS -->
+
+            <div class="card">
+
+                <h2>Upload Documents</h2>
+
+                <label class="sr-only" for="rawDocument">Paste document text</label>
+                <textarea id="rawDocument" placeholder="Paste document text"></textarea>
+
+                <label class="upload-label" for="ocrImage">
+                    Upload Certificate Image
+                </label>
+
+                <input type="file" id="ocrImage" accept="image/*">
+
+            </div>
+
+            <!-- EXPERIENCE -->
+
+            <div class="card">
+
+                <h2>Experience</h2>
+
+                <label class="sr-only" for="experience1">Experience 1</label>
+                <textarea id="experience1" class="experience" placeholder="Experience 1"></textarea>
+
+                <label class="sr-only" for="experience2">Experience 2</label>
+                <textarea id="experience2" class="experience" placeholder="Experience 2"></textarea>
+
+                <label class="sr-only" for="experience3">Experience 3</label>
+                <textarea id="experience3" class="experience" placeholder="Experience 3"></textarea>
+
+            </div>
+
+            <!-- CV TYPE -->
+
+            <div class="card">
+
+                <h2>CV Type</h2>
+
+                <label class="sr-only" for="cvType">CV Type</label>
+                <select id="cvType" aria-label="CV Type">
+
+                    <option value="standard">
+                        Standard CV
+                    </option>
+
+                    <option value="international">
+                        International Premium CV
+                    </option>
+
+                </select>
+
+            </div>
+
+            <!-- BUTTONS -->
+
+            <div class="button-group">
+
+                <button id="extractImageTextBtn">
+                    Extract From Image
+                </button>
+
+                <button id="extractInformationBtn">
+                    Extract Information
+                </button>
+
+                <button id="generateCvBtn">
+                    Generate CV
+                </button>
+
+                <button id="generateCoverLetterBtn">
+                    Generate Cover Letter
+                </button>
+
+                <button id="generateInterviewTipsBtn">
+                    Get Interview Tips
+                </button>
+
+                <button id="downloadCvPdfBtn">
+                    Download CV PDF
+                </button>
+
+                <button id="downloadCoverLetterPdfBtn">
+                    Download Cover Letter PDF
+                </button>
+
+            </div>
+
+            <!-- SERVICES -->
+
+            <div class="card">
+
+    <h2>Select Services</h2>
+
+    <label>
+        <input type="checkbox" class="serviceCheck" value="209">
+        Standard CV — KES 209 (1.64 USD)
+    </label>
+
+    <br><br>
+
+    <label>
+        <input type="checkbox" class="serviceCheck" value="259">
+        International Premium CV — KES 259 (2.00 USD)
+    </label>
+
+    <br><br>
+
+    <label>
+        <input type="checkbox" class="serviceCheck" value="130">
+        Cover Letter — KES 130 (1.00 USD)
+    </label>
+
+    <br><br>
+
+    <h3>
+        Total: KES
+        <span id="totalAmount">0</span>
+    </h3>
+
+    <label class="sr-only" for="mpesaPhone">M-Pesa phone number</label>
+    <input type="text" id="mpesaPhone" placeholder="07XXXXXXXX">
+
+    <div class="payment-section">
+
+        <h2>Choose Payment Method</h2>
+
+        <!-- PAYPAL -->
+
+        <div class="paypal-box">
+
+            <div id="paypal-button-container"></div>
+
+        </div>
+
+        <div id="paymentStatus" class="payment-status"></div>
+
+        <!-- MPESA -->
+
+        <button id="payServiceBtn" class="mpesa-btn">
+            Pay with M-Pesa
+        </button>
+
+    </div>
+
+</div>
+        </div>
+
+        <!-- RIGHT SIDE -->
+
+        <div class="right">
+
+            <div class="top-bar">
+
+                <h2>Preview</h2>
+
+            </div>
+
+            <!-- OUTPUT -->
+
+            <div id="output">
+
+                Generated content appears here...
+
+            </div>
+
+            <!-- HISTORY -->
+
+            <div class="history-box">
+
+                <h2>Saved History</h2>
+
+                <div id="history"></div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- FOOTER -->
+
+<div class="footer-links">
+
+    <a href="privacy.html">
+        Privacy Policy
+    </a>
+
+    <a href="terms.html">
+        Terms & Conditions / Refund Policy
+    </a>
+
+
+</div>
+
+<!-- FIREBASE -->
+
+<script type="module" src="firebase.js"></script>
+
+<!-- MAIN SCRIPT -->
+
+<script type="module" src="script.js"></script>
+
+</body>
+
+</html>
