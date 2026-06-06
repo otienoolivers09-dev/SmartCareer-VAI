@@ -8,7 +8,7 @@ const API_BASE_URL = (() => {
    if (window.location.protocol === 'file:') {
       return 'http://127.0.0.1:3000';
    }
-   return '';
+   return 'https://smartcareervai.onrender.com';
 })();
 
 export function apiUrl(path) {
