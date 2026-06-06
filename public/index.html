@@ -33,23 +33,18 @@
 
         <p id="authMessage" class="auth-message">Please sign in or register to use the Smart Career VAI tools.</p>
 
-        <div class="auth-inputs">
-
-            <input type="email" id="authEmail" placeholder="Enter Email">
-
-            <input type="password" id="authPassword" placeholder="Enter Password">
-
-            <input type="text" id="careerField" placeholder="Career / Profession" class="hidden">
-
-        </div>
-
-        <div class="auth-buttons">
-
-            <button id="primaryAuthBtn" class="login-btn">
-                Login
-            </button>
-
-        </div>
+        <form id="authForm" class="auth-form" onsubmit="return false;">
+            <div class="auth-inputs">
+                <input type="email" id="authEmail" placeholder="Enter Email">
+                <input type="password" id="authPassword" placeholder="Enter Password">
+                <input type="text" id="careerField" placeholder="Career / Profession" class="hidden">
+            </div>
+            <div class="auth-buttons">
+                <button id="primaryAuthBtn" type="button" class="login-btn">
+                    Login
+                </button>
+            </div>
+        </form>
 
         <p id="authToggleText" class="auth-toggle">Don't have an account? Sign up</p>
 

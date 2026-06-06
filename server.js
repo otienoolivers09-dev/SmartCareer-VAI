@@ -109,7 +109,7 @@ if (isProduction) {
 }
 
 // CORS - restrict to allowed origins only
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5500,http://127.0.0.1:5500').split(',');
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5500,http://127.0.0.1:5500,https://smart-career-vai.vercel.app,https://smartcareervai.onrender.com').split(',').map(origin => origin.trim());
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin || allowedOrigins.includes(origin)) {
