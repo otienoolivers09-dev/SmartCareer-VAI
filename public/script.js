@@ -27,17 +27,68 @@ function appendOutputNotice(text) {
 function renderHistory() {
    const historyEl = document.getElementById('history');
    if (!historyEl) return;
-   const histories = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-   historyEl.innerHTML = histories.length ? histories.map(entry => {
-      return `<div class="history-item"><strong>${entry.title}</strong><div>${entry.details}</div><small>${new Date(entry.createdAt).toLocaleString()}</small></div>`;
-   }).join('') : '<p>No saved items yet.</p>';
+   
+   try {
+      const rawData = localStorage.getItem(HISTORY_KEY);
+      const histories = rawData ? JSON.parse(rawData) : [];
+      
+      if (!Array.isArray(histories)) {
+         throw new Error('Corrupted history data');
+      }
+      
+      historyEl.innerHTML = histories.length 
+         ? histories.map(entry => {
+            try {
+               const date = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : 'Unknown date';
+               return `<div class="history-item"><strong>${escapeHtml(entry.title)}</strong><div>${escapeHtml(entry.details)}</div><small>${date}</small></div>`;
+            } catch (e) {
+               console.error('Error rendering history item:', e);
+               return '';
+            }
+         }).join('')
+         : '<p>No saved items yet.</p>';
+   } catch (err) {
+      console.error('History render error:', err);
+      historyEl.innerHTML = '<p style="color: #b00020;">Failed to load history. <a href="#" onclick="localStorage.removeItem(\'' + HISTORY_KEY + '\'); location.reload();">Clear History</a></p>';
+   }
+}
+
+function escapeHtml(text) {
+   const div = document.createElement('div');
+   div.textContent = text;
+   return div.innerHTML;
 }
 
 function saveHistory(title, details) {
-   const histories = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-   histories.unshift({ title, details, createdAt: new Date().toISOString() });
-   localStorage.setItem(HISTORY_KEY, JSON.stringify(histories.slice(0, 20)));
-   renderHistory();
+   try {
+      const rawData = localStorage.getItem(HISTORY_KEY) || '[]';
+      const histories = JSON.parse(rawData);
+      
+      if (!Array.isArray(histories)) {
+         throw new Error('Corrupted history data');
+      }
+      
+      histories.unshift({ 
+         title: String(title), 
+         details: String(details), 
+         createdAt: new Date().toISOString() 
+      });
+      
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(histories.slice(0, 20)));
+      renderHistory();
+   } catch (err) {
+      console.error('Failed to save history:', err);
+      // Don't block user experience, but log the error
+      if (err.message && err.message.includes('QuotaExceededError')) {
+         console.warn('Local storage full. Clearing old history...');
+         try {
+            localStorage.setItem(HISTORY_KEY, JSON.stringify([]));
+            saveHistory(title, details);
+         } catch (clearErr) {
+            console.error('Cannot save history: local storage unavailable');
+         }
+      }
+   }
 }
 
 function setAppVisibility(isSignedIn) {
@@ -277,23 +328,39 @@ function downloadCoverLetterPdf() {
 }
 
 async function initPayPalButtonsIfConfigured() {
-   const config = await loadAppConfig();
-   const container = document.getElementById('paypal-button-container');
-   if (config?.paypalClientId) {
-      try {
-         if (!window.paypal || typeof window.paypal.Buttons !== 'function') {
-            await loadPayPalSdk(config.paypalClientId);
+   try {
+      const config = await loadAppConfig();
+      const container = document.getElementById('paypal-button-container');
+      
+      if (!config) {
+         showPaymentStatus('Failed to load app configuration. PayPal not available.', true);
+         if (container) {
+            container.innerHTML = '<p class="payment-disabled">Unable to load PayPal. Please refresh the page or use M-Pesa.</p>';
          }
-         if (window.paypal && typeof window.paypal.Buttons === 'function') {
-            await initPayPalButtons();
-            return;
-         }
-      } catch (err) {
-         console.error('Failed to load PayPal SDK:', err);
+         return;
       }
-   }
-   if (container) {
-      container.innerHTML = '<p class="payment-disabled">PayPal checkout is unavailable. Please configure PayPal credentials or use M-Pesa.</p>';
+      
+      if (config?.paypalClientId) {
+         try {
+            if (!window.paypal || typeof window.paypal.Buttons !== 'function') {
+               await loadPayPalSdk(config.paypalClientId);
+            }
+            if (window.paypal && typeof window.paypal.Buttons === 'function') {
+               await initPayPalButtons();
+               return;
+            }
+         } catch (err) {
+            console.error('Failed to load PayPal SDK:', err);
+            showPaymentStatus('PayPal SDK failed to load. Using M-Pesa only.', true);
+         }
+      }
+      
+      if (container) {
+         container.innerHTML = '<p class="payment-disabled">PayPal checkout is unavailable. Please configure PayPal credentials or use M-Pesa.</p>';
+      }
+   } catch (err) {
+      console.error('PayPal initialization error:', err);
+      showPaymentStatus('Error initializing payment options.', true);
    }
 }
 
@@ -307,63 +374,109 @@ async function initPayPalButtons() {
       createOrder: async function() {
          const kesAmount = Number(document.getElementById('totalAmount')?.innerText || 0);
          const usdAmount = parseFloat((kesAmount / 130).toFixed(2));
+         
          if (kesAmount <= 0) {
-            alert('Please select a service first');
-            throw new Error('No service selected');
+            showPaymentStatus('Please select a service before initiating PayPal payment.', true);
+            throw new Error('No service selected. Please select at least one service.');
          }
-         const response = await fetchWithAuth('/api/paypal/create-order', {
-            method: 'POST',
-            body: JSON.stringify({ amount: usdAmount, cvId: latestCvId })
-         });
-         const data = await response.json();
-         if (!response.ok || !data.id) {
-            console.error('PayPal create order failed', data);
-            alert(data.error || 'PayPal create order failed.');
-            throw new Error('PayPal create order error');
+         
+         if (usdAmount <= 0 || isNaN(usdAmount)) {
+            showPaymentStatus('Invalid payment amount calculated.', true);
+            throw new Error('Invalid payment amount. Please try again.');
          }
-         return data.id;
+         
+         try {
+            const response = await fetchWithAuth('/api/paypal/create-order', {
+               method: 'POST',
+               body: JSON.stringify({ amount: usdAmount, cvId: latestCvId })
+            });
+            
+            if (!response.ok) {
+               const data = await response.json();
+               const errorMsg = data.error || data.message || 'PayPal order creation failed';
+               showPaymentStatus(`PayPal Error: ${errorMsg}`, true);
+               throw new Error(errorMsg);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.id) {
+               const errorMsg = data.error || 'PayPal did not return an order ID';
+               console.error('PayPal create order invalid response:', data);
+               showPaymentStatus(`PayPal Error: ${errorMsg}`, true);
+               throw new Error(errorMsg);
+            }
+            
+            return data.id;
+         } catch (err) {
+            const errorMsg = err.message || 'Failed to create PayPal order';
+            console.error('PayPal createOrder error:', err);
+            showPaymentStatus(`Payment Error: ${errorMsg}`, true);
+            throw new Error(errorMsg);
+         }
       },
       onApprove: async function(data) {
          const orderId = data.orderID;
          try {
+            showPaymentStatus('Processing PayPal payment...');
             const response = await fetchWithAuth('/api/paypal/capture-order', {
                method: 'POST',
                body: JSON.stringify({ orderID: orderId })
             });
+            
             const result = await response.json();
+            
+            if (!response.ok) {
+               const errorMsg = result.error || result.message || 'PayPal capture failed';
+               showPaymentStatus(`Payment Error: ${errorMsg}`, true);
+               throw new Error(errorMsg);
+            }
+            
             if (response.ok && result.success) {
                hasPaid = true;
                showPaymentStatus('PayPal payment captured successfully.');
                alert('PayPal payment successful! Your full CV is unlocked.');
+               
                if (latestCvId) {
+                  try {
+                     const res = await fetchWithAuth(`/cv/full/${encodeURIComponent(latestCvId)}`);
+                     const j = await res.json();
+                     if (res.ok && j.success) {
+                        latestCV = j.cv;
+                        setOutputText(latestCV);
+                     }
+                  } catch (e) {
+                     console.error('Failed to fetch full CV:', e);
+                  }
+               }
+               return;
+            }
+            
+            // Capture incomplete; poll for webhook confirmation
+            showPaymentStatus('Verifying payment status...');
+            await waitForPayment(orderId, { interval: 3000, timeout: 120000 });
+            showPaymentStatus('Payment confirmed.');
+            
+            if (latestCvId) {
+               try {
                   const res = await fetchWithAuth(`/cv/full/${encodeURIComponent(latestCvId)}`);
                   const j = await res.json();
                   if (res.ok && j.success) {
                      latestCV = j.cv;
                      setOutputText(latestCV);
                   }
-               }
-               return;
-            }
-            showPaymentStatus('Capture incomplete; polling for confirmation...');
-            await waitForPayment(orderId, { interval: 3000, timeout: 120000 });
-            showPaymentStatus('Payment confirmed via webhook.');
-            if (latestCvId) {
-               const res = await fetchWithAuth(`/cv/full/${encodeURIComponent(latestCvId)}`);
-               const j = await res.json();
-               if (res.ok && j.success) {
-                  latestCV = j.cv;
-                  setOutputText(latestCV);
+               } catch (e) {
+                  console.error('Failed to fetch full CV:', e);
                }
             }
          } catch (err) {
             console.error('PayPal approval error:', err);
-            showPaymentStatus('PayPal payment verification failed.', true);
+            showPaymentStatus(`Payment verification failed: ${err.message || 'Unknown error'}`, true);
          }
       },
       onError: function(err) {
          console.error('PayPal Buttons error:', err);
-         showPaymentStatus('PayPal payment encountered an error.', true);
+         showPaymentStatus(`PayPal Error: ${err.message || 'Payment error occurred'}`, true);
       }
    }).render('#paypal-button-container');
 }
@@ -400,16 +513,25 @@ async function handleMpesaPayment() {
          body: JSON.stringify({ amount: Number(totalKes), phone: normalizedPhone, cvId: latestCvId })
       });
       const data = await response.json();
+      
       if (!response.ok) {
-         throw new Error(data.message || data.error || 'M-Pesa payment failed');
+         const errorMsg = data.message || data.error || 'M-Pesa payment failed';
+         throw new Error(errorMsg);
       }
+      
+      if (!data.success) {
+         const errorMsg = data.message || 'M-Pesa request was not successful';
+         throw new Error(errorMsg);
+      }
+      
       showPaymentStatus('M-Pesa STK Push sent. Please approve the payment on your phone.');
       alert('M-Pesa payment request sent. Confirm the payment on your phone.');
       saveHistory('M-Pesa Payment', `KES ${totalKes} to ${normalizedPhone}`);
    } catch (error) {
       console.error('MPesa payment error:', error);
-      showPaymentStatus(error.message || 'M-Pesa request failed.', true);
-      alert(error.message || 'M-Pesa payment failed.');
+      const errorMsg = error.message || 'M-Pesa request failed.';
+      showPaymentStatus(`M-Pesa Error: ${errorMsg}`, true);
+      alert(`M-Pesa Payment Failed: ${errorMsg}`);
    }
 }
 

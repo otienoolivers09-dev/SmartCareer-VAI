@@ -87,31 +87,69 @@ export function downloadTextAsPdf(filename, text) {
 
 export async function loadPayPalSdk(clientId) {
    if (window.paypal && typeof window.paypal.Buttons === 'function') {
-      return;
+      return Promise.resolve();
    }
+   
    return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=USD`;
-      script.onload = resolve;
-      script.onerror = () => reject(new Error('Failed to load PayPal SDK'));
+      
+      script.onload = () => {
+         if (window.paypal && typeof window.paypal.Buttons === 'function') {
+            resolve();
+         } else {
+            reject(new Error('PayPal SDK loaded but Buttons function not available'));
+         }
+      };
+      
+      script.onerror = () => {
+         reject(new Error('Failed to load PayPal SDK from CDN. Check your internet connection and client ID.'));
+      };
+      
+      // Add timeout fallback
+      const timeout = setTimeout(() => {
+         reject(new Error('PayPal SDK load timeout. Please try refreshing the page.'));
+      }, 10000);
+      
+      script.addEventListener('load', () => clearTimeout(timeout));
+      script.addEventListener('error', () => clearTimeout(timeout));
+      
       document.head.appendChild(script);
    });
 }
 
 export async function loadAppConfig() {
    try {
-      const response = await fetch(apiUrl('/config'));
-      const config = await response.json();
+      const configUrl = apiUrl('/config');
+      const response = await fetch(configUrl);
+      
       if (!response.ok) {
-         console.warn('Failed to load app config', config);
-         return config;
+         const status = response.status;
+         if (status === 0) {
+            console.error('Failed to reach config server (CORS or network issue)', configUrl);
+            return null;
+         }
+         console.warn(`Config load failed with status ${status}`, configUrl);
+         return null;
       }
+      
+      const config = await response.json();
+      
       if (config.paypalClientId) {
-         await loadPayPalSdk(config.paypalClientId);
+         try {
+            await loadPayPalSdk(config.paypalClientId);
+         } catch (sdkErr) {
+            console.error('PayPal SDK load failed:', sdkErr.message);
+            config.paypalClientId = null;
+         }
       }
+      
       return config;
    } catch (err) {
-      console.error('App config load failed', err);
+      console.error('App config load failed:', err.message);
+      if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+         console.error('This is likely a CORS or network connectivity issue. Ensure the backend URL is accessible.');
+      }
       return null;
    }
 }

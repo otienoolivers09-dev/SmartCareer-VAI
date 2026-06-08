@@ -35,9 +35,9 @@
 
         <form id="authForm" class="auth-form" onsubmit="return false;">
             <div class="auth-inputs">
-                <input type="email" id="authEmail" placeholder="Enter Email">
-                <input type="password" id="authPassword" placeholder="Enter Password">
-                <input type="text" id="careerField" placeholder="Career / Profession" class="hidden">
+                <input type="email" id="authEmail" placeholder="Enter Email" autocomplete="email">
+                <input type="password" id="authPassword" placeholder="Enter Password" autocomplete="current-password">
+                <input type="text" id="careerField" placeholder="Career / Profession" class="hidden" autocomplete="organization-title">
             </div>
             <div class="auth-buttons">
                 <button id="primaryAuthBtn" type="button" class="login-btn">
@@ -85,13 +85,13 @@
 
                 <h2>Personal Information</h2>
 
-                <input type="text" id="fullName" placeholder="Full Name">
+                <input type="text" id="fullName" placeholder="Full Name" autocomplete="name">
 
-                <input type="text" id="jobTarget" placeholder="Target Job Position">
+                <input type="text" id="jobTarget" placeholder="Target Job Position" autocomplete="organization-title">
 
-                <input type="email" id="email" placeholder="Email">
+                <input type="email" id="email" placeholder="Email" autocomplete="email">
 
-                <input type="text" id="phone" placeholder="Phone Number">
+                <input type="text" id="phone" placeholder="Phone Number" autocomplete="tel">
 
             </div>
 

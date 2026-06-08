@@ -109,13 +109,38 @@ if (isProduction) {
 }
 
 // CORS - restrict to allowed origins only
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5500,http://127.0.0.1:5500,https://smart-career-vai.vercel.app,https://smartcareervai.onrender.com').split(',').map(origin => origin.trim());
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || 'http://localhost:*,http://127.0.0.1:*,https://smart-career-vai.vercel.app,https://smartcareervai.onrender.com';
+const allowedOrigins = rawAllowedOrigins
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
+
+const allowedOriginPatterns = allowedOrigins.map(origin => {
+    if (origin.includes('*')) {
+        return new RegExp(`^${escapeRegExp(origin).replace(/\\\*/g, '.*')}$`);
+    }
+    return origin;
+});
+
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin) {
+            callback(null, true);
+            return;
+        }
+        const isAllowed = allowedOriginPatterns.some(pattern =>
+            typeof pattern === 'string'
+                ? pattern === origin
+                : pattern.test(origin)
+        );
+        if (isAllowed) {
             callback(null, true);
         } else {
-            callback(new Error('CORS not allowed'));
+            callback(new Error(`CORS origin not allowed: ${origin}`));
         }
     },
     credentials: true,
@@ -616,6 +641,11 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
             return res.status(400).json({ success: false, message: error.details[0].message });
         }
 
+        // Validate amount is within reasonable bounds (min 10 KES, max 500,000 KES)
+        if (value.amount < 10 || value.amount > 500000) {
+            return res.status(400).json({ success: false, message: 'Amount must be between KES 10 and KES 500,000' });
+        }
+
         // Get user ID from Firebase token if available
         let userId = null;
         const authHeader = req.headers.authorization;
@@ -633,17 +663,17 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
         try {
             accessToken = await getMpesaAccessToken();
         } catch (e) {
-            // If M-Pesa not configured, respond gracefully
             if (e && e.message && e.message.toLowerCase().includes('m-pesa not configured')) {
                 console.warn('M-Pesa configuration missing, rejecting request');
                 return res.status(503).json({ success: false, message: 'M-Pesa payments are not configured on this server' });
             }
-            console.error('M-Pesa Error:', e.message);
-            return res.status(502).json({ success: false, message: 'M-Pesa service unavailable' });
+            console.error('M-Pesa Access Token Error:', e.message);
+            return res.status(502).json({ success: false, message: 'M-Pesa authentication failed. Please try again later.' });
         }
+
         // Ensure merchant configuration present
         if (!process.env.MPESA_SHORTCODE || !process.env.MPESA_PASSKEY || !process.env.MPESA_CALLBACK_URL) {
-            console.warn('M-Pesa merchant config missing (MPESA_SHORTCODE/MPESA_PASSKEY/MPESA_CALLBACK_URL)');
+            console.warn('M-Pesa merchant config missing');
             return res.status(503).json({ success: false, message: 'M-Pesa merchant configuration incomplete on server' });
         }
 
@@ -651,26 +681,49 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
         const password = Buffer.from(process.env.MPESA_SHORTCODE + process.env.MPESA_PASSKEY + timestamp).toString("base64");
 
         const baseUrl = process.env.MPESA_ENV === 'production' ? 'https://api.safaricom.co.ke' : 'https://sandbox.safaricom.co.ke';
-        const response = await axios.post(`${baseUrl}/mpesa/stkpush/v1/processrequest`, {
-            BusinessShortCode: process.env.MPESA_SHORTCODE,
-            Password: password,
-            Timestamp: timestamp,
-            TransactionType: "CustomerPayBillOnline",
-            Amount: Math.round(value.amount),
-            PartyA: value.phone,
-            PartyB: process.env.MPESA_SHORTCODE,
-            PhoneNumber: value.phone,
-            CallBackURL: process.env.MPESA_CALLBACK_URL,
-            AccountReference: "Smart CV AI",
-            TransactionDesc: "CV Payment"
-        }, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-            timeout: 10000
-        });
-
-        // persist pending mpesa payment with user ID if available
+        
+        let response;
         try {
-            const payload = response.data || {};
+            response = await axios.post(`${baseUrl}/mpesa/stkpush/v1/processrequest`, {
+                BusinessShortCode: process.env.MPESA_SHORTCODE,
+                Password: password,
+                Timestamp: timestamp,
+                TransactionType: "CustomerPayBillOnline",
+                Amount: Math.round(value.amount),
+                PartyA: value.phone,
+                PartyB: process.env.MPESA_SHORTCODE,
+                PhoneNumber: value.phone,
+                CallBackURL: process.env.MPESA_CALLBACK_URL,
+                AccountReference: "SmartCVAI",
+                TransactionDesc: "CV Payment"
+            }, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+                timeout: 10000
+            });
+        } catch (axiosErr) {
+            console.error('M-Pesa STK Push API Error:', axiosErr.message);
+            const statusCode = axiosErr.response?.status || 502;
+            const errorMsg = axiosErr.response?.data?.errorMessage || 'M-Pesa service error';
+            return res.status(statusCode).json({ success: false, message: `M-Pesa Error: ${errorMsg}` });
+        }
+
+        // Validate response
+        if (!response.data) {
+            console.error('Invalid M-Pesa response:', response);
+            return res.status(502).json({ success: false, message: 'Invalid response from M-Pesa' });
+        }
+
+        // Check for success indicators
+        const payload = response.data;
+        const isSuccess = payload.CheckoutRequestID || payload.MerchantRequestID;
+        
+        if (!isSuccess) {
+            console.error('M-Pesa returned error response:', payload);
+            return res.status(400).json({ success: false, message: payload.errorMessage || 'M-Pesa request failed' });
+        }
+
+        // Persist pending mpesa payment with user ID if available
+        try {
             const orderId = payload.CheckoutRequestID || payload.MerchantRequestID || (`mpesa_${Date.now()}`);
             await payments.createPayment({ 
                 order_id: orderId, 
@@ -685,11 +738,13 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
             });
         } catch (e) {
             console.error('Failed to persist mpesa payment:', e.message);
+            // Continue - payment was initiated successfully
         }
+        
         res.json({ success: true, data: response.data });
     } catch (error) {
         console.error("M-Pesa Error:", error.message);
-        res.status(500).json({ success: false, message: "M-Pesa failed" });
+        res.status(500).json({ success: false, message: "M-Pesa payment initiation failed. Please try again." });
     }
 });
 
@@ -698,12 +753,17 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
 ========================= */
 app.post("/api/paypal/create-order", paymentLimiter, async (req, res) => {
     if (!isPayPalConfigured()) {
-        return res.status(503).json({ error: 'PayPal credentials are not configured' });
+        return res.status(503).json({ success: false, error: 'PayPal credentials are not configured' });
     }
     try {
         const { error, value } = paymentAmountSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({ error: error.details[0].message });
+            return res.status(400).json({ success: false, error: error.details[0].message });
+        }
+
+        // Validate amount is within reasonable bounds (min $1, max $10,000)
+        if (value.amount < 1 || value.amount > 10000) {
+            return res.status(400).json({ success: false, error: 'Amount must be between $1 and $10,000' });
         }
 
         // Get user ID from Firebase token if available
@@ -729,11 +789,19 @@ app.post("/api/paypal/create-order", paymentLimiter, async (req, res) => {
             application_context: {
                 brand_name: "Smart CV AI",
                 landing_page: "NO_PREFERENCE",
-                user_action: "PAY_NOW"
+                user_action: "PAY_NOW",
+                return_url: process.env.PAYPAL_RETURN_URL || "https://smartcareervai.onrender.com/success.html",
+                cancel_url: process.env.PAYPAL_CANCEL_URL || "https://smartcareervai.onrender.com/cancel.html"
             }
         });
 
         const order = await paypalClient.execute(request);
+        
+        // Validate response
+        if (!order || !order.result || !order.result.id) {
+            console.error('Invalid PayPal response:', order);
+            return res.status(502).json({ success: false, error: 'Invalid response from PayPal' });
+        }
         
         if (paymentsAvailable) {
             try {
@@ -750,15 +818,14 @@ app.post("/api/paypal/create-order", paymentLimiter, async (req, res) => {
                 });
             } catch (e) {
                 console.error('Failed to create payment record:', e.message);
+                // Continue anyway - payment tracking is secondary
             }
-        } else {
-            console.warn('Firebase is not configured; skipping PayPal payment persistence.');
         }
         
-        res.json({ id: order.result.id });
+        res.json({ success: true, id: order.result.id });
     } catch (error) {
         console.error("PayPal Create Order Error:", error.message);
-        res.status(500).json({ error: "PayPal order failed" });
+        res.status(502).json({ success: false, error: 'PayPal order creation failed. Please try again.' });
     }
 });
 
@@ -769,12 +836,25 @@ app.post("/api/paypal/capture-order", paymentLimiter, async (req, res) => {
     try {
         const orderId = req.body.orderID;
         if (!orderId) {
-            return res.status(400).json({ success: false, error: 'Missing orderID' });
+            return res.status(400).json({ success: false, error: 'Missing orderID in request body' });
         }
 
         const request = new paypal.orders.OrdersCaptureRequest(orderId);
         request.requestBody({});
-        const capture = await paypalClient.execute(request);
+        
+        let capture;
+        try {
+            capture = await paypalClient.execute(request);
+        } catch (paypalErr) {
+            console.error('PayPal capture API error:', paypalErr.message);
+            return res.status(502).json({ success: false, error: 'PayPal capture API error. Order may have already been captured.' });
+        }
+
+        // Validate capture response
+        if (!capture || !capture.result) {
+            console.error('Invalid PayPal capture response:', capture);
+            return res.status(502).json({ success: false, error: 'Invalid response from PayPal' });
+        }
 
         let paymentRecord = null;
         let tokenInfo = null;
@@ -799,14 +879,12 @@ app.post("/api/paypal/capture-order", paymentLimiter, async (req, res) => {
             } catch (e) {
                 console.warn('Failed to create access token:', e.message);
             }
-        } else {
-            console.warn('Firebase is not configured; skipping payment persistence and token generation.');
         }
 
         res.json({ success: true, data: capture.result, token: tokenInfo });
     } catch (error) {
         console.error("PayPal Capture Error:", error.message);
-        res.status(500).json({ success: false, error: 'PayPal capture failed' });
+        res.status(502).json({ success: false, error: 'PayPal capture failed. Please contact support if the issue persists.' });
     }
 });
 

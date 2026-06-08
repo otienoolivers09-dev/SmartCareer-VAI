@@ -1,0 +1,116 @@
+/* ===================================
+   FIRESTORE SECURITY RULES
+   For Smart Career VAI Application
+   ==================================== */
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return request.auth.token.admin == true || 
+             request.auth.token.isAdmin == true ||
+             request.auth.token.role == 'admin';
+    }
+    
+    /* ===== CVs Collection ===== */
+    match /cvs/{cvId} {
+      // Authenticated users can read their own CVs
+      allow read: if isAuthenticated() && isOwner(resource.data.user_id);
+      
+      // Users can create CVs for themselves
+      allow create: if isAuthenticated() && 
+                       request.resource.data.user_id == request.auth.uid &&
+                       request.resource.data.cv_id != null &&
+                       request.resource.data.content != null;
+      
+      // Users can update their own CVs
+      allow update: if isAuthenticated() && isOwner(resource.data.user_id);
+      
+      // Admins can read all CVs
+      allow read: if isAdmin();
+      
+      // Deny deletes by default (only admins should delete if needed)
+      allow delete: if false;
+    }
+    
+    /* ===== Payments Collection ===== */
+    match /payments/{paymentId} {
+      // Authenticated users can read their own payments
+      allow read: if isAuthenticated() && isOwner(resource.data.user_id);
+      
+      // Users can create their own payment records
+      allow create: if isAuthenticated() && 
+                       request.resource.data.user_id == request.auth.uid;
+      
+      // Server can update payment records (via admin SDK)
+      allow update: if isAuthenticated() && isOwner(resource.data.user_id);
+      
+      // Admins can read all payments
+      allow read: if isAdmin();
+      
+      // Deny deletes
+      allow delete: if false;
+    }
+    
+    /* ===== Access Logs Collection ===== */
+    match /access_logs/{logId} {
+      // Only admins can read access logs
+      allow read: if isAdmin();
+      
+      // Server can create logs
+      allow create: if isAuthenticated() || request.auth == null;
+      
+      // Deny updates and deletes
+      allow update: if false;
+      allow delete: if false;
+    }
+    
+    /* ===== Tokens Collection ===== */
+    match /tokens/{token} {
+      // Server can read tokens during verification
+      allow read: if isAuthenticated();
+      
+      // Server can create tokens
+      allow create: if isAuthenticated();
+      
+      // Server can update token usage
+      allow update: if isAuthenticated();
+      
+      // Deny deletes
+      allow delete: if false;
+    }
+    
+    /* ===== Default Deny ===== */
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+/* ===================================
+   DEPLOYMENT INSTRUCTIONS
+   ==================================== */
+/*
+1. Go to Firebase Console (console.firebase.google.com)
+2. Select your project
+3. Navigate to Firestore Database > Rules
+4. Copy the entire rules_version block above
+5. Click "Publish" to deploy
+6. Verify the rules are active in the Rules tab
+
+NOTE: These rules require authenticated Firebase users.
+- Users must sign in via Firebase Authentication first
+- The uid from their auth token determines data ownership
+- Admins need custom claims set in Firebase (admin: true or isAdmin: true)
+*/
