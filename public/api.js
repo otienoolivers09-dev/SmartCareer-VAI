@@ -1,12 +1,16 @@
 import { getFirebaseToken } from './auth.js';
 
 const API_BASE_URL = (() => {
-   const host = window.location.host;
-   if (host === 'localhost:5500' || host === '127.0.0.1:5500' || host === 'localhost:5501' || host === '127.0.0.1:5501') {
+   const host = window.location.hostname;
+   if (host === 'localhost' || host === '127.0.0.1' || window.location.protocol === 'file:') {
       return 'http://127.0.0.1:3000';
    }
-   if (window.location.protocol === 'file:') {
-      return 'http://127.0.0.1:3000';
+   const backendHosts = [
+      'smartcareervai.onrender.com',
+      'api.smartcareervai.com'
+   ];
+   if (backendHosts.includes(host)) {
+      return window.location.origin;
    }
    return 'https://smartcareervai.onrender.com';
 })();

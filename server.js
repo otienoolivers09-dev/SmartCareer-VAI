@@ -113,11 +113,23 @@ function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || 'http://localhost:*,http://127.0.0.1:*,https://smart-career-vai.vercel.app,https://smartcareervai.onrender.com';
+const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || 'http://localhost:*,http://127.0.0.1:*,https://smart-career-vai.vercel.app,https://smart-career-cqzy59ol1-olivers-otieno-s-projects.vercel.app,https://smartcareervai.com,https://api.smartcareervai.com,https://smartcareervai.onrender.com';
 const allowedOrigins = rawAllowedOrigins
     .split(',')
     .map(origin => origin.trim())
     .filter(Boolean);
+
+const requiredOrigins = [
+    'https://smart-career-cqzy59ol1-olivers-otieno-s-projects.vercel.app',
+    'https://smartcareervai.com',
+    'https://api.smartcareervai.com',
+    'https://smartcareervai.onrender.com'
+];
+requiredOrigins.forEach(origin => {
+    if (!allowedOrigins.includes(origin)) {
+        allowedOrigins.push(origin);
+    }
+});
 
 const allowedOriginPatterns = allowedOrigins.map(origin => {
     if (origin.includes('*')) {
@@ -209,6 +221,7 @@ function isMpesaConfigured() {
 app.get('/config', (req, res) => {
     res.json({
         paypalClientId: process.env.PAYPAL_CLIENT_ID || null,
+        paypalConfigured: isPayPalConfigured(),
         paypalMode: process.env.PAYPAL_MODE || 'sandbox',
         mpesaConfigured: isMpesaConfigured(),
         firebaseConfigured: firebaseInitialized,
@@ -398,8 +411,11 @@ async function getPaypalAccessToken() {
         });
         return { token: resp.data.access_token, base };
     } catch (err) {
-        console.error('PayPal token fetch error:', err.message);
-        throw new Error('Failed to get PayPal access token');
+        console.error('PayPal token fetch error:', err.response?.data || err.message || err);
+        const details = err.response?.data || { message: err.message };
+        const e = new Error('Failed to get PayPal access token');
+        e.details = details;
+        throw e;
     }
 }
 
@@ -824,8 +840,10 @@ app.post("/api/paypal/create-order", paymentLimiter, async (req, res) => {
         
         res.json({ success: true, id: order.result.id });
     } catch (error) {
-        console.error("PayPal Create Order Error:", error.message);
-        res.status(502).json({ success: false, error: 'PayPal order creation failed. Please try again.' });
+        // Log detailed PayPal error for debugging (avoid logging secrets)
+        console.error("PayPal Create Order Error:", error.response?.data || error.message || error);
+        const details = error.response?.data || { message: error.message };
+        res.status(502).json({ success: false, error: 'PayPal order creation failed. Check server logs for details.', details });
     }
 });
 
@@ -846,8 +864,9 @@ app.post("/api/paypal/capture-order", paymentLimiter, async (req, res) => {
         try {
             capture = await paypalClient.execute(request);
         } catch (paypalErr) {
-            console.error('PayPal capture API error:', paypalErr.message);
-            return res.status(502).json({ success: false, error: 'PayPal capture API error. Order may have already been captured.' });
+            console.error('PayPal capture API error:', paypalErr.response?.data || paypalErr.message || paypalErr);
+            const details = paypalErr.response?.data || { message: paypalErr.message };
+            return res.status(502).json({ success: false, error: 'PayPal capture API error. Order may have already been captured.', details });
         }
 
         // Validate capture response

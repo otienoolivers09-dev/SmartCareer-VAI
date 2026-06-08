@@ -340,6 +340,15 @@ async function initPayPalButtonsIfConfigured() {
          return;
       }
       
+      if (!config.paypalConfigured) {
+         console.warn('PayPal is not configured on backend');
+         showPaymentStatus('PayPal is not configured on the backend. Please check the Render environment variables.', true);
+         if (container) {
+            container.innerHTML = '<p class="payment-disabled">PayPal is not configured on the backend. Please check the server settings or use M-Pesa.</p>';
+         }
+         return;
+      }
+
       if (config?.paypalClientId) {
          try {
             if (!window.paypal || typeof window.paypal.Buttons !== 'function') {
