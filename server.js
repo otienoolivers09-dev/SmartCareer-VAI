@@ -78,7 +78,7 @@ app.use((req, res, next) => {
         `script-src 'self' 'nonce-${nonce}' https://www.paypal.com https://www.paypalobjects.com https://sb.paypal.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net`,
         "style-src 'self'",
         "img-src 'self' data: https://images.unsplash.com",
-        "connect-src 'self' https://api-m.sandbox.paypal.com https://api-m.paypal.com https://sandbox.safaricom.co.ke https://www.googleapis.com https://firestore.googleapis.com",
+        "connect-src 'self' https://smartcareervai.onrender.com https://api.smartcareervai.com https://api-m.sandbox.paypal.com https://api-m.paypal.com https://sandbox.safaricom.co.ke https://api.safaricom.co.ke https://www.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
         "font-src 'self'",
         "object-src 'none'",
         "frame-src 'self' https://www.paypal.com https://www.paypalobjects.com",
