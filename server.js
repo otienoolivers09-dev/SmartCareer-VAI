@@ -104,11 +104,14 @@ app.set('trust proxy', true);
 if (isProduction) {
     app.use((req, res, next) => {
         const host = (req.headers.host || '').toLowerCase();
-        const isLocalHost = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+        const localHostPattern = /^(localhost|127\.0\.0\.1|::1)(:\d+)?$/;
+        const isLocalHost = localHostPattern.test(host);
+        const remoteAddress = (req.ip || req.connection.remoteAddress || '').toString();
+        const isLocalAddress = /^(::1|127\.0\.0\.1|::ffff:127\.0\.0\.1)$/.test(remoteAddress);
         const protocol = req.headers['x-forwarded-proto'] || req.protocol;
         const isSecure = req.secure || protocol === 'https';
 
-        if (!isSecure && !isLocalHost) {
+        if (!isSecure && !isLocalHost && !isLocalAddress) {
             res.redirect(`https://${req.headers.host}${req.url}`);
             return;
         }
