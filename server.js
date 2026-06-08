@@ -76,10 +76,10 @@ app.use((req, res, next) => {
     res.setHeader('Content-Security-Policy', [
         "default-src 'self'",
         `script-src 'self' 'nonce-${nonce}' https://www.paypal.com https://www.paypalobjects.com https://sb.paypal.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net`,
-        "style-src 'self'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "img-src 'self' data: https://images.unsplash.com",
-        "connect-src 'self' https://smartcareervai.onrender.com https://api.smartcareervai.com https://api-m.sandbox.paypal.com https://api-m.paypal.com https://sandbox.safaricom.co.ke https://api.safaricom.co.ke https://www.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
-        "font-src 'self'",
+        "connect-src 'self' https://smartcareervai.onrender.com https://api.smartcareervai.com https://smart-career-vai.vercel.app https://smart-career-vai-git-main-olivers-otieno-s-projects.vercel.app https://smart-career-f0ggjy9ja-olivers-otieno-s-projects.vercel.app https://smartcareervai.com https://api-m.sandbox.paypal.com https://api-m.paypal.com https://sandbox.safaricom.co.ke https://api.safaricom.co.ke https://www.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
+        "font-src 'self' https://fonts.gstatic.com",
         "object-src 'none'",
         "frame-src 'self' https://www.paypal.com https://www.paypalobjects.com",
         "base-uri 'self'",
@@ -97,14 +97,23 @@ app.use(helmet.hsts({
 
 app.use(helmet.referrerPolicy({ policy: 'strict-origin-when-cross-origin' }));
 
-// HTTPS redirect in production
+// Enable proxy trust so forwarded proto works behind Render/other proxies.
+app.set('trust proxy', true);
+
+// HTTPS redirect in production, but do not force HTTPS for local development.
 if (isProduction) {
     app.use((req, res, next) => {
-        if (req.header('x-forwarded-proto') !== 'https') {
-            res.redirect(`https://${req.header('host')}${req.url}`);
-        } else {
-            next();
+        const host = (req.headers.host || '').toLowerCase();
+        const isLocalHost = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+        const isSecure = req.secure || protocol === 'https';
+
+        if (!isSecure && !isLocalHost) {
+            res.redirect(`https://${req.headers.host}${req.url}`);
+            return;
         }
+
+        next();
     });
 }
 
@@ -113,13 +122,20 @@ function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || 'http://localhost:*,http://127.0.0.1:*,https://smart-career-vai.vercel.app,https://smart-career-cqzy59ol1-olivers-otieno-s-projects.vercel.app,https://smartcareervai.com,https://api.smartcareervai.com,https://smartcareervai.onrender.com';
+const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || 'https://smart-career-vai.vercel.app,https://smart-career-cqzy59ol1-olivers-otieno-s-projects.vercel.app,https://smartcareervai.com,https://api.smartcareervai.com,https://smartcareervai.onrender.com';
 const allowedOrigins = rawAllowedOrigins
     .split(',')
     .map(origin => origin.trim())
     .filter(Boolean);
 
+const defaultLocalOrigins = [
+    'http://localhost:*',
+    'http://127.0.0.1:*'
+];
+
 const requiredOrigins = [
+    ...defaultLocalOrigins,
+    'https://smart-career-vai.vercel.app',
     'https://smart-career-cqzy59ol1-olivers-otieno-s-projects.vercel.app',
     'https://smartcareervai.com',
     'https://api.smartcareervai.com',
@@ -200,12 +216,19 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
+function getEnvString(name) {
+    const value = process.env[name];
+    return typeof value === 'string' ? value.trim() : '';
+}
+
 function isPayPalConfigured() {
-    return Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET);
+    const clientId = getEnvString('PAYPAL_CLIENT_ID');
+    const clientSecret = getEnvString('PAYPAL_CLIENT_SECRET');
+    return Boolean(clientId && clientSecret);
 }
 
 function isOpenAIConfigured() {
-    return Boolean(process.env.OPENAI_API_KEY);
+    return Boolean(getEnvString('OPENAI_API_KEY'));
 }
 
 function isMpesaConfigured() {
@@ -220,9 +243,12 @@ function isMpesaConfigured() {
 
 app.get('/config', (req, res) => {
     res.json({
-        paypalClientId: process.env.PAYPAL_CLIENT_ID || null,
+        paypalClientId: getEnvString('PAYPAL_CLIENT_ID') || null,
         paypalConfigured: isPayPalConfigured(),
-        paypalMode: process.env.PAYPAL_MODE || 'sandbox',
+        paypalMode: getEnvString('PAYPAL_MODE') || 'sandbox',
+        paypalReturnUrl: getEnvString('PAYPAL_RETURN_URL') || 'https://smartcareervai.onrender.com/success.html',
+        paypalCancelUrl: getEnvString('PAYPAL_CANCEL_URL') || 'https://smartcareervai.onrender.com/cancel.html',
+        paypalWebhookId: getEnvString('PAYPAL_WEBHOOK_ID') || null,
         mpesaConfigured: isMpesaConfigured(),
         firebaseConfigured: firebaseInitialized,
         openAIConfigured: isOpenAIConfigured()
@@ -373,13 +399,21 @@ async function verifyPaymentStatus(req, res, next) {
    PAYPAL CONFIG
 ========================= */
 function paypalEnvironment() {
-    const clientId = process.env.PAYPAL_CLIENT_ID;
-    const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
-    return process.env.PAYPAL_MODE === "live" 
+    const clientId = getEnvString('PAYPAL_CLIENT_ID');
+    const clientSecret = getEnvString('PAYPAL_CLIENT_SECRET');
+
+    if (!clientId || !clientSecret) {
+        throw new Error('PayPal credentials are missing. Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in your environment.');
+    }
+
+    return getEnvString('PAYPAL_MODE') === 'live'
         ? new paypal.core.LiveEnvironment(clientId, clientSecret)
         : new paypal.core.SandboxEnvironment(clientId, clientSecret);
 }
-const paypalClient = new paypal.core.PayPalHttpClient(paypalEnvironment());
+
+function getPaypalClient() {
+    return new paypal.core.PayPalHttpClient(paypalEnvironment());
+}
 
 // initialize payments DB only when Firebase is ready
 if (firebaseInitialized) {
@@ -397,9 +431,12 @@ if (firebaseInitialized) {
 
 // helper to get PayPal access token for REST calls
 async function getPaypalAccessToken() {
-    const clientId = process.env.PAYPAL_CLIENT_ID;
-    const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
-    const base = process.env.PAYPAL_MODE === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+    const clientId = getEnvString('PAYPAL_CLIENT_ID');
+    const clientSecret = getEnvString('PAYPAL_CLIENT_SECRET');
+    if (!clientId || !clientSecret) {
+        throw new Error('PayPal credentials are missing. Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in your environment.');
+    }
+    const base = getEnvString('PAYPAL_MODE') === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
     try {
         const resp = await axios({
             method: 'post',
@@ -806,12 +843,12 @@ app.post("/api/paypal/create-order", paymentLimiter, async (req, res) => {
                 brand_name: "Smart CV AI",
                 landing_page: "NO_PREFERENCE",
                 user_action: "PAY_NOW",
-                return_url: process.env.PAYPAL_RETURN_URL || "https://smartcareervai.onrender.com/success.html",
-                cancel_url: process.env.PAYPAL_CANCEL_URL || "https://smartcareervai.onrender.com/cancel.html"
+                return_url: getEnvString('PAYPAL_RETURN_URL') || "https://smartcareervai.onrender.com/success.html",
+                cancel_url: getEnvString('PAYPAL_CANCEL_URL') || "https://smartcareervai.onrender.com/cancel.html"
             }
         });
 
-        const order = await paypalClient.execute(request);
+        const order = await getPaypalClient().execute(request);
         
         // Validate response
         if (!order || !order.result || !order.result.id) {
@@ -862,7 +899,7 @@ app.post("/api/paypal/capture-order", paymentLimiter, async (req, res) => {
         
         let capture;
         try {
-            capture = await paypalClient.execute(request);
+            capture = await getPaypalClient().execute(request);
         } catch (paypalErr) {
             console.error('PayPal capture API error:', paypalErr.response?.data || paypalErr.message || paypalErr);
             const details = paypalErr.response?.data || { message: paypalErr.message };

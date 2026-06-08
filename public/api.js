@@ -1,6 +1,7 @@
 import { getFirebaseToken } from './auth.js';
 
-const API_BASE_URL = (() => {
+const LOCAL_API_PORTS = [3000, 3001, 3002];
+let API_BASE_URL = (() => {
    const host = window.location.hostname;
    if (host === 'localhost' || host === '127.0.0.1' || window.location.protocol === 'file:') {
       return 'http://127.0.0.1:3000';
@@ -15,8 +16,28 @@ const API_BASE_URL = (() => {
    return 'https://smartcareervai.onrender.com';
 })();
 
+function isLocalHost() {
+   const host = window.location.hostname;
+   return host === 'localhost' || host === '127.0.0.1' || window.location.protocol === 'file:';
+}
+
+function normalizeBaseUrl(url) {
+   return url.replace(/\/+$/, '');
+}
+
 export function apiUrl(path) {
-   return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
+   return API_BASE_URL ? `${normalizeBaseUrl(API_BASE_URL)}${path}` : path;
+}
+
+async function tryLoadConfig(baseUrl) {
+   const url = `${normalizeBaseUrl(baseUrl)}/config`;
+   const response = await fetch(url, { cache: 'no-store' });
+   if (!response.ok) {
+      throw new Error(`Config fetch failed with status ${response.status}`);
+   }
+   const config = await response.json();
+   API_BASE_URL = normalizeBaseUrl(baseUrl);
+   return config;
 }
 
 export async function fetchWithAuth(url, options = {}) {
@@ -27,6 +48,39 @@ export async function fetchWithAuth(url, options = {}) {
    };
    if (token) headers.Authorization = `Bearer ${token}`;
    return fetch(apiUrl(url), { ...options, headers });
+}
+
+export async function loadAppConfig() {
+   const baseUrls = [API_BASE_URL];
+   if (isLocalHost()) {
+      const localHost = 'http://127.0.0.1';
+      LOCAL_API_PORTS.forEach(port => {
+         const candidate = `${localHost}:${port}`;
+         if (!baseUrls.includes(candidate)) {
+            baseUrls.push(candidate);
+         }
+      });
+   }
+
+   for (const baseUrl of baseUrls) {
+      try {
+         const config = await tryLoadConfig(baseUrl);
+         if (config.paypalClientId) {
+            try {
+               await loadPayPalSdk(config.paypalClientId);
+            } catch (sdkErr) {
+               console.error('PayPal SDK load failed:', sdkErr.message);
+               config.paypalClientId = null;
+            }
+         }
+         return config;
+      } catch (err) {
+         console.warn(`App config load failed for ${baseUrl}:`, err.message);
+      }
+   }
+
+   console.error('App config load failed on all candidate local backend addresses.');
+   return null;
 }
 
 export function showPaymentStatus(msg, isError = false) {
@@ -122,38 +176,3 @@ export async function loadPayPalSdk(clientId) {
    });
 }
 
-export async function loadAppConfig() {
-   try {
-      const configUrl = apiUrl('/config');
-      const response = await fetch(configUrl);
-      
-      if (!response.ok) {
-         const status = response.status;
-         if (status === 0) {
-            console.error('Failed to reach config server (CORS or network issue)', configUrl);
-            return null;
-         }
-         console.warn(`Config load failed with status ${status}`, configUrl);
-         return null;
-      }
-      
-      const config = await response.json();
-      
-      if (config.paypalClientId) {
-         try {
-            await loadPayPalSdk(config.paypalClientId);
-         } catch (sdkErr) {
-            console.error('PayPal SDK load failed:', sdkErr.message);
-            config.paypalClientId = null;
-         }
-      }
-      
-      return config;
-   } catch (err) {
-      console.error('App config load failed:', err.message);
-      if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
-         console.error('This is likely a CORS or network connectivity issue. Ensure the backend URL is accessible.');
-      }
-      return null;
-   }
-}
