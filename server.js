@@ -75,7 +75,7 @@ app.use((req, res, next) => {
     const nonce = res.locals.nonce;
     res.setHeader('Content-Security-Policy', [
         "default-src 'self'",
-        `script-src 'self' 'nonce-${nonce}' https://www.paypal.com https://www.paypalobjects.com https://sb.paypal.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net`,
+        `script-src 'self' 'unsafe-inline' https://www.paypal.com https://www.paypalobjects.com https://sb.paypal.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net`,
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "img-src 'self' data: https://images.unsplash.com https://www.paypalobjects.com https://www.paypal.com https://www.sandbox.paypal.com",
         "connect-src 'self' https://smartcareervai.onrender.com https://api.smartcareervai.com https://smart-career-vai.vercel.app https://smart-career-vai-git-main-olivers-otieno-s-projects.vercel.app https://vercel.com https://smartcareervai.com https://api-m.sandbox.paypal.com https://api-m.paypal.com https://www.sandbox.paypal.com https://www.paypal.com https://www.paypalobjects.com https://sandbox.safaricom.co.ke https://api.safaricom.co.ke https://www.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
