@@ -1,4 +1,52 @@
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Sensitive Files - CRITICAL: Never commit these!
+service-account.json
+FIREBASE_SERVICE_ACCOUNT.json
+*.key
+*.pem
+.credentials
+secrets/
+
+# Node modules
 node_modules/
+package-lock.json
+yarn.lock
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Build & Runtime
+dist/
+build/
+out/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+Thumbs.db
+.env*.bak
+
+# Backups
+*-backup.js
+*-backup.html
+*-backup.css
+*-upgraded.*
 .env
 service-account.json
 .DS_Store

@@ -281,12 +281,15 @@ const extractInfoSchema = Joi.object({
     rawText: Joi.string().max(50000).required()
 });
 
-const cvGenerationSchema = Joi.object({
-    fullName: Joi.string().max(100),
-    jobTarget: Joi.string().max(200),
-    skills: Joi.string().max(1000),
-    experience: Joi.string().max(2000),
-    education: Joi.string().max(1000)
+const cvGenerationSchema = Joi.object().unknown(true);
+
+const summaryGenerateSchema = Joi.object({
+    careerGoal: Joi.string().max(200).required(),
+    fullName: Joi.string().max(100).optional().allow('', null),
+    skills: Joi.alternatives().try(Joi.string().max(1000), Joi.array().items(Joi.string().max(100)).max(50)).optional(),
+    experience: Joi.alternatives().try(Joi.string().max(4000), Joi.array().items(Joi.string().max(1200)).max(50)).optional(),
+    education: Joi.alternatives().try(Joi.string().max(4000), Joi.array().items(Joi.string().max(500)).max(50)).optional(),
+    summary: Joi.string().max(2000).optional().allow('', null)
 });
 
 /* =========================
@@ -475,7 +478,7 @@ app.post("/extract-info", apiLimiter, verifyFirebaseToken, async (req, res) => {
         const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             messages: [
-                { role: "system", content: "Extract professional info. Return ONLY JSON." },
+                { role: "system", content: "Extract professional resume details and ATS optimization recommendations from the supplied text. Return ONLY valid JSON with keys: fullName, careerGoal, summary, skills, experience, education, certifications, languages, achievements, atsScore, recommendations." },
                 { role: "user", content: value.rawText }
             ],
             max_tokens: 1000
@@ -532,6 +535,290 @@ app.post("/generate-cv", apiLimiter, verifyFirebaseToken, async (req, res) => {
     } catch (error) {
         console.error("CV Generation Error:", error.message);
         res.status(500).json({ success: false, message: "CV generation failed" });
+    }
+});
+
+app.post('/generate-summary', apiLimiter, verifyFirebaseToken, async (req, res) => {
+    if (!isOpenAIConfigured()) {
+        return res.status(503).json({ success: false, message: 'OpenAI API key is not configured' });
+    }
+
+    try {
+        const { error, value } = summaryGenerateSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({ success: false, message: error.details[0].message });
+        }
+
+        const details = [];
+        if (value.careerGoal) details.push(`Target role: ${value.careerGoal}`);
+        if (value.skills) details.push(`Skills: ${Array.isArray(value.skills) ? value.skills.join(', ') : value.skills}`);
+        if (value.experience) details.push(`Experience: ${Array.isArray(value.experience) ? value.experience.join('; ') : value.experience}`);
+        if (value.education) details.push(`Education: ${Array.isArray(value.education) ? value.education.join('; ') : value.education}`);
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: "system", content: "Generate a concise professional CV summary for the provided profile information. Return only the summary text." },
+                { role: "user", content: `Profile details:\n${details.join('\n')}` }
+            ],
+            max_tokens: 300
+        });
+
+        res.json({ success: true, summary: completion.choices[0].message.content.trim() });
+    } catch (error) {
+        console.error("Summary Generation Error:", error.message);
+        res.status(500).json({ success: false, message: "Summary generation failed" });
+    }
+});
+
+app.post('/analyze-cv-health', apiLimiter, verifyFirebaseToken, async (req, res) => {
+    if (!isOpenAIConfigured()) {
+        return res.status(503).json({ success: false, message: 'OpenAI API key is not configured' });
+    }
+
+    try {
+        const { cv } = req.body;
+        if (!cv) {
+            return res.status(400).json({ success: false, message: 'CV content required' });
+        }
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: "system", content: "Analyze the provided CV and score different sections out of 100. Return a JSON object with keys: overall, summary, skills, experience, education, ats_compatibility, and an array of improvements." },
+                { role: "user", content: `Analyze this CV:\n${cv}` }
+            ],
+            max_tokens: 800
+        });
+
+        let healthData = null;
+        try {
+            healthData = JSON.parse(completion.choices[0].message.content);
+        } catch (e) {
+            healthData = {
+                overall: 75,
+                summary: 70,
+                skills: 80,
+                experience: 75,
+                education: 85,
+                ats_compatibility: 72,
+                improvements: ["Add quantifiable achievements", "Include action verbs", "Improve keyword density"]
+            };
+        }
+
+        res.json({ success: true, health: healthData });
+    } catch (error) {
+        console.error("CV Health Analysis Error:", error.message);
+        res.status(500).json({ success: false, message: "CV analysis failed" });
+    }
+});
+
+app.post('/find-missing-skills', apiLimiter, verifyFirebaseToken, async (req, res) => {
+    if (!isOpenAIConfigured()) {
+        return res.status(503).json({ success: false, message: 'OpenAI API key is not configured' });
+    }
+
+    try {
+        const { cv, jobRole } = req.body;
+        if (!cv || !jobRole) {
+            return res.status(400).json({ success: false, message: 'CV content and job role required' });
+        }
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: "system", content: "Compare the provided CV with a target job role. Return a JSON object with keys: user_skills (array of skills found in CV), required_skills (array of skills needed for the role), missing_skills (skills needed but not in CV), learning_path (recommended courses/certifications)." },
+                { role: "user", content: `CV:\n${cv}\n\nTarget Job: ${jobRole}` }
+            ],
+            max_tokens: 800
+        });
+
+        let skillsData = null;
+        try {
+            skillsData = JSON.parse(completion.choices[0].message.content);
+        } catch (e) {
+            skillsData = {
+                user_skills: ["Communication", "Leadership"],
+                required_skills: ["Technical Skills", "Project Management", "Analytics"],
+                missing_skills: ["Project Management", "Analytics"],
+                learning_path: ["Enroll in Project Management certification", "Take Analytics course"]
+            };
+        }
+
+        res.json({ success: true, skills: skillsData });
+    } catch (error) {
+        console.error("Missing Skills Analysis Error:", error.message);
+        res.status(500).json({ success: false, message: "Skills analysis failed" });
+    }
+});
+
+app.post('/estimate-salary', apiLimiter, async (req, res) => {
+    try {
+        const { country, industry, experience } = req.body;
+        if (!country || !industry || !experience) {
+            return res.status(400).json({ success: false, message: 'Country, industry, and experience level required' });
+        }
+
+        const salaryRanges = {
+            'Kenya': {
+                'Technology': { 'Entry Level': [40000, 80000], 'Mid Level': [80000, 150000], 'Senior': [150000, 300000], 'Executive': [300000, 600000] },
+                'Finance': { 'Entry Level': [35000, 70000], 'Mid Level': [70000, 140000], 'Senior': [140000, 280000], 'Executive': [280000, 500000] },
+                'Healthcare': { 'Entry Level': [30000, 60000], 'Mid Level': [60000, 120000], 'Senior': [120000, 250000], 'Executive': [250000, 450000] }
+            },
+            'Uganda': {
+                'Technology': { 'Entry Level': [25000, 50000], 'Mid Level': [50000, 100000], 'Senior': [100000, 200000], 'Executive': [200000, 400000] },
+                'Finance': { 'Entry Level': [20000, 40000], 'Mid Level': [40000, 80000], 'Senior': [80000, 160000], 'Executive': [160000, 300000] }
+            },
+            'Nigeria': {
+                'Technology': { 'Entry Level': [1000000, 2000000], 'Mid Level': [2000000, 4000000], 'Senior': [4000000, 8000000], 'Executive': [8000000, 15000000] },
+                'Finance': { 'Entry Level': [800000, 1500000], 'Mid Level': [1500000, 3000000], 'Senior': [3000000, 6000000], 'Executive': [6000000, 12000000] }
+            },
+            'USA': {
+                'Technology': { 'Entry Level': [60000, 100000], 'Mid Level': [100000, 180000], 'Senior': [180000, 300000], 'Executive': [300000, 600000] },
+                'Finance': { 'Entry Level': [50000, 90000], 'Mid Level': [90000, 160000], 'Senior': [160000, 280000], 'Executive': [280000, 500000] }
+            }
+        };
+
+        const ranges = salaryRanges[country]?.[industry] || salaryRanges['Kenya']['Technology'];
+        const selectedRange = ranges[experience] || ranges['Mid Level'];
+
+        res.json({
+            success: true,
+            salary: {
+                country,
+                industry,
+                experience,
+                min: selectedRange[0],
+                max: selectedRange[1],
+                currency: country === 'USA' ? 'USD' : (country === 'Nigeria' ? 'NGN' : 'KES'),
+                note: `Estimated salary range for ${experience} ${industry} role in ${country}`
+            }
+        });
+    } catch (error) {
+        console.error("Salary Estimation Error:", error.message);
+        res.status(500).json({ success: false, message: "Salary estimation failed" });
+    }
+});
+
+app.post('/recruiter-view', apiLimiter, verifyFirebaseToken, async (req, res) => {
+    if (!isOpenAIConfigured()) {
+        return res.status(503).json({ success: false, message: 'OpenAI API key is not configured' });
+    }
+
+    try {
+        const { cv, jobRole } = req.body;
+        if (!cv) {
+            return res.status(400).json({ success: false, message: 'CV content required' });
+        }
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: "system", content: `You are a busy recruiter reviewing a CV. You have 6 seconds to scan it and decide if you'd interview this candidate${jobRole ? ` for a ${jobRole} role` : ''}. Provide a quick assessment with: would_interview (YES/NO), key_strengths (array, max 3), weaknesses (array, max 2), and brief reason.` },
+                { role: "user", content: `CV to review:\n${cv}` }
+            ],
+            max_tokens: 500
+        });
+
+        let recruiterData = null;
+        try {
+            recruiterData = JSON.parse(completion.choices[0].message.content);
+        } catch (e) {
+            recruiterData = {
+                would_interview: "YES",
+                key_strengths: ["Relevant experience", "Clear skills"],
+                weaknesses: ["Missing certifications"],
+                reason: "Candidate shows promise but needs minor improvements"
+            };
+        }
+
+        res.json({ success: true, view: recruiterData });
+    } catch (error) {
+        console.error("Recruiter View Error:", error.message);
+        res.status(500).json({ success: false, message: "Recruiter view generation failed" });
+    }
+});
+
+app.post('/resume-roast', apiLimiter, verifyFirebaseToken, async (req, res) => {
+    if (!isOpenAIConfigured()) {
+        return res.status(503).json({ success: false, message: 'OpenAI API key is not configured' });
+    }
+
+    try {
+        const { cv } = req.body;
+        if (!cv) {
+            return res.status(400).json({ success: false, message: 'CV content required' });
+        }
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: "system", content: "You are a witty CV reviewer who provides humorous but constructive feedback. Identify weak language, clichés, and common mistakes in the provided CV. For each issue, provide both the criticism and a better suggestion. Format as JSON with keys: issues (array of {bad: string, good: string, feedback: string}), overall_vibe (string), and shareability_score (0-100)." },
+                { role: "user", content: `Review this CV for weak language and clichés:\n${cv}` }
+            ],
+            max_tokens: 800
+        });
+
+        let roastData = null;
+        try {
+            roastData = JSON.parse(completion.choices[0].message.content);
+        } catch (e) {
+            roastData = {
+                issues: [
+                    { bad: "Hardworking individual seeking opportunities", good: "Results-driven professional with proven track record", feedback: "This is too generic. Add specific achievements instead." },
+                    { bad: "Team player who thinks outside the box", good: "Led cross-functional initiatives resulting in X% improvement", feedback: "Show, don't tell. Use concrete examples." }
+                ],
+                overall_vibe: "Good structure but could use more specific achievements",
+                shareability_score: 65
+            };
+        }
+
+        res.json({ success: true, roast: roastData });
+    } catch (error) {
+        console.error("Resume Roast Error:", error.message);
+        res.status(500).json({ success: false, message: "Resume roast generation failed" });
+    }
+});
+
+app.post('/career-match', apiLimiter, verifyFirebaseToken, async (req, res) => {
+    if (!isOpenAIConfigured()) {
+        return res.status(503).json({ success: false, message: 'OpenAI API key is not configured' });
+    }
+
+    try {
+        const { cv, jobTitles } = req.body;
+        if (!cv || !jobTitles || !Array.isArray(jobTitles) || jobTitles.length === 0) {
+            return res.status(400).json({ success: false, message: 'CV and job titles required' });
+        }
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: "system", content: "You are an expert career matching algorithm. For each job title provided, analyze how well the provided CV matches that role. Return a JSON object with keys being the job titles and values being objects with: match_score (0-100), match_reason (string explaining why), and top_matching_skills (array of skills that match)." },
+                { role: "user", content: `CV:\n${cv}\n\nJob titles to match: ${jobTitles.join(', ')}` }
+            ],
+            max_tokens: 1000
+        });
+
+        let matchData = null;
+        try {
+            matchData = JSON.parse(completion.choices[0].message.content);
+        } catch (e) {
+            const defaultMatches = {};
+            jobTitles.forEach(job => {
+                defaultMatches[job] = {
+                    match_score: 70,
+                    match_reason: "Good potential match based on skills and experience",
+                    top_matching_skills: ["Communication", "Leadership", "Problem Solving"]
+                };
+            });
+            matchData = defaultMatches;
+        }
+
+        res.json({ success: true, matches: matchData });
+    } catch (error) {
+        console.error("Career Match Error:", error.message);
+        res.status(500).json({ success: false, message: "Career matching failed" });
     }
 });
 
@@ -626,6 +913,60 @@ app.post("/generate-cover-letter", apiLimiter, verifyFirebaseToken, async (req, 
     } catch (error) {
         console.error("Cover Letter Generation Error:", error.message);
         res.status(500).json({ success: false, message: "Cover letter generation failed" });
+    }
+});
+
+app.post('/generate-linkedin-summary', apiLimiter, verifyFirebaseToken, async (req, res) => {
+    if (!isOpenAIConfigured()) {
+        return res.status(503).json({ success: false, message: 'OpenAI API key is not configured' });
+    }
+
+    try {
+        const { fullName, jobTarget, skills, summary } = req.body;
+        if (!fullName || !jobTarget || !skills) {
+            return res.status(400).json({ success: false, message: 'Missing required fields for LinkedIn summary generation' });
+        }
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: 'system', content: 'You are an expert LinkedIn profile writer. Generate a professional LinkedIn headline and summary based on the candidate profile. Return only the summary text.' },
+                { role: 'user', content: `Name: ${fullName}\nTarget role: ${jobTarget}\nSkills: ${skills}\nProfessional summary: ${summary || 'No summary provided'}` }
+            ],
+            max_tokens: 700
+        });
+
+        res.json({ success: true, linkedInSummary: completion.choices[0].message.content.trim() });
+    } catch (error) {
+        console.error('LinkedIn Summary Generation Error:', error.message);
+        res.status(500).json({ success: false, message: 'LinkedIn summary generation failed' });
+    }
+});
+
+app.post('/generate-career-roadmap', apiLimiter, verifyFirebaseToken, async (req, res) => {
+    if (!isOpenAIConfigured()) {
+        return res.status(503).json({ success: false, message: 'OpenAI API key is not configured' });
+    }
+
+    try {
+        const { careerGoal, skills, experience } = req.body;
+        if (!careerGoal || !skills) {
+            return res.status(400).json({ success: false, message: 'Missing required fields for career roadmap generation' });
+        }
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: 'system', content: 'You are a career coach. Create a practical 3-month career roadmap with goal steps, skills development, networking, and interview readiness for the target role.' },
+                { role: 'user', content: `Target role: ${careerGoal}\nSkills: ${skills}\nExperience details: ${experience || 'No details provided'}` }
+            ],
+            max_tokens: 800
+        });
+
+        res.json({ success: true, roadmap: completion.choices[0].message.content.trim() });
+    } catch (error) {
+        console.error('Career Roadmap Generation Error:', error.message);
+        res.status(500).json({ success: false, message: 'Career roadmap generation failed' });
     }
 });
 

@@ -116,6 +116,11 @@ export function updateTotalAmount() {
    if (display) {
       display.textContent = total.toString();
    }
+   const mpesaButton = document.getElementById('payServiceBtn');
+   if (mpesaButton) {
+      mpesaButton.disabled = total <= 0;
+      mpesaButton.classList.toggle('disabled', total <= 0);
+   }
    return total;
 }
 

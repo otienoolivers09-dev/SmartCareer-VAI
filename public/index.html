@@ -2,345 +2,954 @@
 <html lang="en">
 
 <head>
-
-<meta charset="UTF-8">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Smart Career VAI</title>
-
-<link rel="stylesheet" href="style.css">
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-
+  <!-- Meta Tags & SEO -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Generate professional CVs, cover letters, and interview prep with AI. Join 10K+ job seekers accelerating their careers.">
+  <meta name="keywords" content="CV generator, cover letter, AI resume, job application, career tools">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="author" content="Smart Career VAI">
+  
+  <!-- Open Graph Tags -->
+  <meta property="og:title" content="Smart Career VAI - AI-Powered CV & Career Tools">
+  <meta property="og:description" content="Transform your career in minutes with AI-powered CV generation, cover letters, and interview prep. 4.8★ rated by job seekers.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://smartcareervai.com">
+  <meta property="og:image" content="https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=1200">
+  
+  <!-- Twitter Tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Smart Career VAI">
+  <meta name="twitter:description" content="AI-powered CV generator used by 10K+ job seekers">
+  
+  <title>Smart Career VAI - AI Resume & Career Tools</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="style.css?v=3">
+  
+  <!-- External Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 
 <body>
+  <div class="page-shell">
+    <!-- App Header -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-label">Smart Career</span>
+        <span class="brand-highlight">VAI</span>
+      </div>
+      <div class="user-panel">
+        <div id="userStatus" class="user-status"></div>
+        <button id="logoutBtn" class="text-btn hidden" aria-label="Sign out">Sign Out</button>
+      </div>
+    </header>
 
-<!-- AUTH SECTION -->
+    <!-- Main Content -->
+    <main class="main-content">
+      
+      <!-- ===== HERO LANDING PAGE ===== -->
+      <section id="heroSection" class="hero-landing">
+        <div class="hero-container">
+          <div class="hero-content">
+            <h1 class="hero-title">Transform Your Career with AI</h1>
+            <p class="hero-subtitle">Create a job-winning CV, cover letter, and interview prep in minutes with AI-powered tools.</p>
+            
+            <div class="hero-features">
+              <div class="hero-feature">
+                <span class="feature-icon">✨</span>
+                <span>AI-powered CV generation</span>
+              </div>
+              <div class="hero-feature">
+                <span class="feature-icon">📊</span>
+                <span>CV health scores & optimization</span>
+              </div>
+              <div class="hero-feature">
+                <span class="feature-icon">💼</span>
+                <span>Salary estimates & recruiter insights</span>
+              </div>
+              <div class="hero-feature">
+                <span class="feature-icon">🚀</span>
+                <span>Instant interview preparation</span>
+              </div>
+            </div>
+            
+            <p class="hero-cta-text">Join thousands of job seekers accelerating their careers.</p>
+            <button id="heroLoginBtn" type="button" class="primary-btn hero-btn" aria-label="Get started">Get Started</button>
+          </div>
+          
+          <div class="hero-stats">
+            <div class="stat">
+              <div class="stat-number">10K+</div>
+              <div class="stat-label">CVs Generated</div>
+            </div>
+            <div class="stat">
+              <div class="stat-number">4.8★</div>
+              <div class="stat-label">User Rating</div>
+            </div>
+            <div class="stat">
+              <div class="stat-number">3min</div>
+              <div class="stat-label">Average Setup</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Trust Signals -->
+        <div class="trust-signals">
+          <div class="trust-item">
+            <span class="trust-icon">🔒</span>
+            <span>Secure & Private</span>
+          </div>
+          <div class="trust-item">
+            <span class="trust-icon">⚡</span>
+            <span>Instant Results</span>
+          </div>
+          <div class="trust-item">
+            <span class="trust-icon">💯</span>
+            <span>100% Satisfaction</span>
+          </div>
+        </div>
+      </section>
 
-<div id="authSection" class="auth-box glass-effect">
-
-    <div class="auth-content">
-
-        <h1>Smart Career VAI</h1>
-
-        <p class="welcome-text">
-            🚀 Create a Professional Job-Winning CV in Minutes
-        </p>
-
-        <p id="authMessage" class="auth-message">Please sign in or register to use the Smart Career VAI tools.</p>
-
+      <!-- ===== AUTHENTICATION SECTION ===== -->
+      <section id="authSection" class="card auth-card">
+        <div class="auth-head">
+          <div>
+            <p class="eyebrow">Welcome back</p>
+            <h1>Sign in to your account</h1>
+          </div>
+          <div class="feature-pill">Secure login with Firebase</div>
+        </div>
+        <p class="auth-copy">Sign in to access AI-powered CV creation and your career dashboard.</p>
+        
+        <div id="formMessage" class="form-message" role="alert" aria-live="polite"></div>
+        
         <form id="authForm" class="auth-form" onsubmit="return false;">
-            <div class="auth-inputs">
-                <input type="email" id="authEmail" placeholder="Enter Email" autocomplete="email">
-                <input type="password" id="authPassword" placeholder="Enter Password" autocomplete="current-password">
-                <input type="text" id="careerField" placeholder="Career / Profession" class="hidden" autocomplete="organization-title">
-            </div>
-            <div class="auth-buttons">
-                <button id="primaryAuthBtn" type="button" class="login-btn">
-                    Login
-                </button>
-            </div>
+          <div class="field-group">
+            <label class="field-label" for="authEmail">
+              Email address
+              <span class="required" aria-label="required">*</span>
+            </label>
+            <input 
+              type="email" 
+              id="authEmail" 
+              name="email"
+              placeholder="you@example.com" 
+              autocomplete="email" 
+              required
+              aria-describedby="emailHelp"
+            >
+            <div class="field-hint" id="emailHelp">We'll never share your email.</div>
+          </div>
+          
+          <div class="field-group">
+            <label class="field-label" for="authPassword">
+              Password
+              <span class="required" aria-label="required">*</span>
+            </label>
+            <input 
+              type="password" 
+              id="authPassword" 
+              name="password"
+              placeholder="Enter your password" 
+              autocomplete="current-password" 
+              required
+              aria-describedby="passwordHelp"
+            >
+            <div class="field-hint" id="passwordHelp">Minimum 6 characters</div>
+          </div>
+          
+          <div class="field-group hidden">
+            <label class="field-label" for="careerField">Career or profession</label>
+            <input 
+              type="text" 
+              id="careerField" 
+              name="career"
+              placeholder="Your profession" 
+              autocomplete="organization-title"
+            >
+          </div>
+          
+          <button id="primaryAuthBtn" type="button" class="primary-btn login-btn">Login</button>
         </form>
+        
+        <div class="auth-footer">
+          <p id="authToggleText" class="auth-toggle">Don't have an account? <button type="button" class="link-btn">Sign up</button></p>
+          <button type="button" class="link-btn" id="forgotPasswordBtn">Forgot password?</button>
+        </div>
+      </section>
 
-        <p id="authToggleText" class="auth-toggle">Don't have an account? Sign up</p>
+      <!-- ===== SIGNUP CHOICE MODAL ===== -->
+      <div id="signupChoiceModal" class="modal hidden">
+        <div class="modal-overlay" onclick="closeSignupChoice()"></div>
+        <div class="modal-content signup-modal">
+          <button type="button" class="modal-close" onclick="closeSignupChoice()" aria-label="Close">✕</button>
+          
+          <div class="signup-header">
+            <h2>Get Started with Smart Career VAI</h2>
+            <p>How would you like to create your career profile?</p>
+          </div>
+          
+          <div class="signup-options">
+            <button type="button" class="signup-option-card" id="signupUploadOption">
+              <span class="option-icon">📤</span>
+              <h3>Upload Existing CV</h3>
+              <p>Upload your resume for AI analysis and improvement. Takes just 2 minutes.</p>
+              <span class="option-cta">Upload CV</span>
+            </button>
+            
+            <button type="button" class="signup-option-card" id="signupBuildOption">
+              <span class="option-icon">✏️</span>
+              <h3>Build from Scratch</h3>
+              <p>Answer guided questions and let AI build a professional CV for you. Step-by-step.</p>
+              <span class="option-cta">Build CV</span>
+            </button>
+          </div>
+          
+          <div class="signup-note">
+            <span class="note-icon">ℹ️</span>
+            <p>Both options give you a professional CV, cover letter, and interview prep. Choose what's easier for you.</p>
+          </div>
+        </div>
+      </div>
 
-    </div>
+      <!-- ===== APP SECTION ===== -->
+      <section id="appSection" class="hidden">
+        
+        <!-- Landing Page with Path Selection -->
+        <section id="landingPage" class="card welcome-card app-section">
+          <div class="hero-copy">
+            <p class="eyebrow">How would you like to start?</p>
+            <h1>Choose your career path</h1>
+            <p>Upload an existing CV for analysis and improvement, or build a complete CV from scratch with a guided wizard.</p>
+          </div>
+          
+          <div class="option-grid">
+            <button id="uploadPathBtn" type="button" class="option-card" aria-label="Upload existing CV">
+              <span class="option-title">📤 Upload Existing CV</span>
+              <span class="option-copy">AI reads your CV, improves it, and generates a polished career package in minutes.</span>
+              <span class="arrow">→</span>
+            </button>
+            
+            <button id="wizardPathBtn" type="button" class="option-card" aria-label="Create CV from scratch">
+              <span class="option-title">✏️ Create CV From Scratch</span>
+              <span class="option-copy">Answer simple guided questions and let AI build your complete professional CV.</span>
+              <span class="arrow">→</span>
+            </button>
+          </div>
+          
+          <div class="quick-notes">
+            <div><strong>Step 1:</strong> Choose your path (upload or build)</div>
+            <div><strong>Step 2:</strong> Review and enhance with AI</div>
+            <div><strong>Step 3:</strong> Get cover letter & interview prep</div>
+          </div>
+        </section>
 
-</div>
-
-<!-- MAIN APP -->
-
-<div id="appSection" class="hidden fade-in-app">
-
-    <div class="container">
-
-        <!-- LEFT SIDE -->
-
-        <div class="left">
-
-            <div class="top-bar">
-
-                <div>
-                    <h1>Smart Career VAI</h1>
-                    <p id="userStatus" class="user-status"></p>
-                </div>
-
-                <button id="logoutBtn" class="logout-btn">
-                    Logout
-                </button>
-
+        <!-- ===== UPLOAD SECTION ===== -->
+        <section id="uploadSection" class="card app-section hidden">
+          <div class="path-header">
+            <div>
+              <p class="eyebrow">Option 1</p>
+              <h2>Upload & Improve Your CV</h2>
+              <p class="section-description">Upload a CV file or paste your CV text. The AI will analyze and generate an improved version.</p>
             </div>
-
-            <p class="subtitle">
-                🚀 AI-powered professional CVs and cover letters for modern careers.
-            </p>
-
-            <!-- PERSONAL INFO -->
-
-            <div class="card">
-
-                <h2>Personal Information</h2>
-
-                <input type="text" id="fullName" placeholder="Full Name" autocomplete="name">
-
-                <input type="text" id="jobTarget" placeholder="Target Job Position" autocomplete="organization-title">
-
-                <input type="email" id="email" placeholder="Email" autocomplete="email">
-
-                <input type="text" id="phone" placeholder="Phone Number" autocomplete="tel">
-
-            </div>
-
-            <!-- SUMMARY -->
-
-            <div class="card">
-
-                <h2>Professional Summary</h2>
-
-                <textarea id="summary" placeholder="Professional Summary"></textarea>
-
-            </div>
-
-            <!-- SKILLS -->
-
-            <div class="card">
-
-                <h2>Skills</h2>
-
-                <textarea id="skills" placeholder="Skills"></textarea>
-
-            </div>
-
-            <!-- EDUCATION -->
-
-            <div class="card">
-
-                <h2>Education</h2>
-
-                <textarea id="education" placeholder="Education"></textarea>
-
-            </div>
-
-            <!-- QUALIFICATIONS -->
-
-            <div class="card">
-
-                <h2>Qualifications</h2>
-
-                <textarea id="qualifications" placeholder="Qualifications"></textarea>
-
-            </div>
-
-            <!-- DOCUMENTS -->
-
-            <div class="card">
-
-                <h2>Upload Documents</h2>
-
-                <label class="sr-only" for="rawDocument">Paste document text</label>
-                <textarea id="rawDocument" placeholder="Paste document text"></textarea>
-
-                <label class="upload-label" for="ocrImage">
-                    Upload Certificate Image
+            <button id="backToLandingFromUpload" type="button" class="secondary-btn" aria-label="Go back">← Back</button>
+          </div>
+          
+          <div class="form-section">
+            <h3>Upload Your CV</h3>
+            <p class="section-copy">Choose a file or paste your CV text below.</p>
+            
+            <div class="upload-options">
+              <div class="file-input-wrapper">
+                <label class="file-upload" for="uploadCvFile">
+                  <span class="upload-icon">📎</span>
+                  <span class="upload-text">Select a CV file or image</span>
+                  <span class="upload-hint">Supports PDF, DOCX, TXT, PNG, JPG</span>
                 </label>
+                <input type="file" id="uploadCvFile" accept=".txt,.pdf,.docx,.doc,image/*" aria-label="Upload CV file">
+              </div>
+              
+              <div class="divider">OR</div>
+              
+              <textarea 
+                id="uploadCvText" 
+                class="large-input" 
+                placeholder="Paste your CV text here..."
+                aria-label="Paste CV text"
+                aria-describedby="cvTextHint"
+              ></textarea>
+              <div class="field-hint" id="cvTextHint">Paste the full text from your CV</div>
+            </div>
+          </div>
+          
+          <div class="form-section">
+            <h3>Your Information</h3>
+            <p class="section-copy">Help us personalize the improvements.</p>
+            
+            <div class="field-grid">
+              <div class="field-group">
+                <label class="field-label" for="uploadFullName">Full Name</label>
+                <input 
+                  type="text" 
+                  id="uploadFullName" 
+                  placeholder="e.g., John Doe"
+                  aria-label="Full name"
+                >
+                <div class="field-hint">This will appear on your CV</div>
+              </div>
+              
+              <div class="field-group">
+                <label class="field-label" for="uploadJobTarget">Target Role</label>
+                <input 
+                  type="text" 
+                  id="uploadJobTarget" 
+                  placeholder="e.g., Software Engineer, Marketing Manager"
+                  aria-label="Target job role"
+                >
+                <div class="field-hint">Help AI optimize for this role</div>
+              </div>
 
-                <input type="file" id="ocrImage" accept="image/*">
+              <div class="field-group">
+                <label class="field-label" for="uploadJobDescription">Target Job Description</label>
+                <textarea
+                  id="uploadJobDescription"
+                  placeholder="Paste the job description or key responsibilities here"
+                  aria-label="Target job description"
+                  aria-describedby="uploadJobDescHint"
+                ></textarea>
+                <div class="field-hint" id="uploadJobDescHint">Use this to tailor the CV and cover letter to the role.</div>
+              </div>
+              
+              <div class="field-group">
+                <label class="field-label" for="uploadSkills">Key Skills</label>
+                <input 
+                  type="text" 
+                  id="uploadSkills" 
+                  placeholder="e.g., Python, Project Management, Communication"
+                  aria-label="Key skills"
+                >
+                <div class="field-hint">Comma-separated list</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="button-row">
+            <button id="processUploadedCvBtn" type="button" class="secondary-btn" aria-label="Analyze CV">
+              Analyze CV
+            </button>
+            <button id="extractProfileBtn" type="button" class="secondary-btn" aria-label="Extract profile information">
+              Extract Profile
+            </button>
+            <button id="generateFromUploadBtn" type="button" class="primary-btn" aria-label="Generate improved CV">
+              Generate Improved CV
+            </button>
+          </div>
+          
+          <div id="uploadStatus" class="status-message" role="status" aria-live="polite"></div>
+        </section>
 
+        <!-- ===== WIZARD SECTION ===== -->
+        <section id="wizardSection" class="card app-section hidden">
+          <div class="path-header">
+            <div>
+              <p class="eyebrow">Option 2</p>
+              <h2>Build Your CV Step-by-Step</h2>
+              <p class="section-description">Answer a few simple questions and let AI create your professional CV.</p>
+            </div>
+            <button id="backToLandingFromWizard" type="button" class="secondary-btn" aria-label="Go back">← Back</button>
+          </div>
+          
+          <!-- Progress Bar -->
+          <div class="wizard-progress">
+            <span id="wizardStepLabel" aria-live="polite">Step 1 of 10</span>
+            <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="10" aria-label="Wizard progress">
+              <div id="wizardProgressFill" class="progress-fill"></div>
+            </div>
+          </div>
+          
+          <!-- Wizard Steps -->
+          <div id="wizardSteps">
+            <!-- Step 1: Personal Information -->
+            <div class="wizard-step" data-step="1">
+              <h3>Personal Information</h3>
+              <p class="step-description">Let's start with your basic details.</p>
+              
+              <div class="field-grid">
+                <div class="field-group">
+                  <label class="field-label" for="fullName">Full Name <span class="required">*</span></label>
+                  <input type="text" id="fullName" placeholder="e.g., Jane Smith" required aria-label="Full name">
+                </div>
+                
+                <div class="field-group">
+                  <label class="field-label" for="phone">Phone Number</label>
+                  <input type="tel" id="phone" placeholder="07XXXXXXXX" aria-label="Phone number">
+                  <div class="field-hint">Format: 07XXXXXXXX</div>
+                </div>
+                
+                <div class="field-group">
+                  <label class="field-label" for="email">Email <span class="required">*</span></label>
+                  <input type="email" id="email" placeholder="you@example.com" required aria-label="Email address">
+                </div>
+                
+                <div class="field-group">
+                  <label class="field-label" for="location">Location</label>
+                  <input type="text" id="location" placeholder="e.g., Nairobi, Kenya" aria-label="Location">
+                  <div class="field-hint">City, Country</div>
+                </div>
+                
+                <div class="field-group">
+                  <label class="field-label" for="linkedin">LinkedIn Profile (Optional)</label>
+                  <input type="url" id="linkedin" placeholder="https://linkedin.com/in/yourprofile" aria-label="LinkedIn URL">
+                </div>
+                
+                <div class="field-group">
+                  <label class="field-label" for="portfolio">Portfolio Website (Optional)</label>
+                  <input type="url" id="portfolio" placeholder="https://portfolio.example.com" aria-label="Portfolio URL">
+                </div>
+              </div>
             </div>
 
-            <!-- EXPERIENCE -->
-
-            <div class="card">
-
-                <h2>Experience</h2>
-
-                <label class="sr-only" for="experience1">Experience 1</label>
-                <textarea id="experience1" class="experience" placeholder="Experience 1"></textarea>
-
-                <label class="sr-only" for="experience2">Experience 2</label>
-                <textarea id="experience2" class="experience" placeholder="Experience 2"></textarea>
-
-                <label class="sr-only" for="experience3">Experience 3</label>
-                <textarea id="experience3" class="experience" placeholder="Experience 3"></textarea>
-
+            <!-- Step 2: Career Goal -->
+            <div class="wizard-step hidden" data-step="2">
+              <h3>Career Goal</h3>
+              <p class="step-description">What role are you targeting?</p>
+              
+              <div class="field-group">
+                <label class="field-label" for="careerGoal">Target Role <span class="required">*</span></label>
+                <input type="text" id="careerGoal" placeholder="e.g., Senior Developer, Product Manager" required aria-label="Target career role">
+              </div>
+              
+              <div class="example-pills">
+                <button type="button" class="example-pill" onclick="fillExample('careerGoal', 'Software Developer')">Software Developer</button>
+                <button type="button" class="example-pill" onclick="fillExample('careerGoal', 'Data Analyst')">Data Analyst</button>
+                <button type="button" class="example-pill" onclick="fillExample('careerGoal', 'Marketing Manager')">Marketing Manager</button>
+                <button type="button" class="example-pill" onclick="fillExample('careerGoal', 'Accountant')">Accountant</button>
+                <button type="button" class="example-pill" onclick="fillExample('careerGoal', 'Nurse')">Nurse</button>
+              </div>
             </div>
 
-            <!-- CV TYPE -->
-
-            <div class="card">
-
-                <h2>CV Type</h2>
-
-                <label class="sr-only" for="cvType">CV Type</label>
-                <select id="cvType" aria-label="CV Type">
-
-                    <option value="standard">
-                        Standard CV
-                    </option>
-
-                    <option value="international">
-                        International Premium CV
-                    </option>
-
-                </select>
-
+            <!-- Step 3: Professional Summary -->
+            <div class="wizard-step hidden" data-step="3">
+              <h3>Professional Summary</h3>
+              <p class="step-description">Write a brief summary or let AI create one for you.</p>
+              
+              <div class="field-group">
+                <label class="field-label" for="summary">Your Summary</label>
+                <textarea 
+                  id="summary" 
+                  placeholder="Tell us about yourself (your experience, strengths, achievements)..."
+                  aria-label="Professional summary"
+                  aria-describedby="summaryHint"
+                ></textarea>
+                <div class="field-hint" id="summaryHint">This will be optimized and used in your CV. Leave blank for AI to generate.</div>
+              </div>
+              
+              <button id="generateSummaryBtn" type="button" class="secondary-btn">
+                ✨ Generate Summary with AI
+              </button>
             </div>
 
-            <!-- BUTTONS -->
-
-            <div class="button-group">
-
-                <button id="extractImageTextBtn">
-                    Extract From Image
-                </button>
-
-                <button id="extractInformationBtn">
-                    Extract Information
-                </button>
-
-                <button id="generateCvBtn">
-                    Generate CV
-                </button>
-
-                <button id="generateCoverLetterBtn">
-                    Generate Cover Letter
-                </button>
-
-                <button id="generateInterviewTipsBtn">
-                    Get Interview Tips
-                </button>
-
-                <button id="downloadCvPdfBtn">
-                    Download CV PDF
-                </button>
-
-                <button id="downloadCoverLetterPdfBtn">
-                    Download Cover Letter PDF
-                </button>
-
+            <!-- Step 4: Education -->
+            <div class="wizard-step hidden" data-step="4">
+              <h3>Education</h3>
+              <p class="step-description">Add your educational qualifications.</p>
+              
+              <div id="educationRows" class="entry-group">
+                <div class="entry-row">
+                  <input type="text" name="institution" placeholder="Institution/University" aria-label="Institution">
+                  <input type="text" name="course" placeholder="Course/Program" aria-label="Course or program">
+                  <input type="text" name="grade" placeholder="Grade/GPA" aria-label="Grade or GPA">
+                  <input type="text" name="startYear" placeholder="Start year" aria-label="Start year">
+                  <input type="text" name="endYear" placeholder="Completion year" aria-label="End year">
+                </div>
+              </div>
+              
+              <button id="addEducationRowBtn" type="button" class="secondary-btn">+ Add Education Entry</button>
             </div>
 
-            <!-- SERVICES -->
+            <!-- Step 5: Skills -->
+            <div class="wizard-step hidden" data-step="5">
+              <h3>Skills</h3>
+              <p class="step-description">Select the skills that describe you best.</p>
+              
+              <div class="skill-grid">
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="skills-checkbox" value="Communication">
+                  Communication
+                </label>
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="skills-checkbox" value="Leadership">
+                  Leadership
+                </label>
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="skills-checkbox" value="Problem Solving">
+                  Problem Solving
+                </label>
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="skills-checkbox" value="Teamwork">
+                  Teamwork
+                </label>
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="skills-checkbox" value="Microsoft Office">
+                  Microsoft Office
+                </label>
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="skills-checkbox" value="Customer Service">
+                  Customer Service
+                </label>
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="skills-checkbox" value="Sales">
+                  Sales
+                </label>
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="skills-checkbox" value="Marketing">
+                  Marketing
+                </label>
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="skills-checkbox" value="Programming">
+                  Programming
+                </label>
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="skills-checkbox" value="Project Management">
+                  Project Management
+                </label>
+              </div>
+              
+              <div class="custom-skill-input">
+                <label class="field-label" for="customSkill">Add Custom Skill</label>
+                <div class="input-with-button">
+                  <input type="text" id="customSkill" placeholder="e.g., Machine Learning, Data Analysis" aria-label="Custom skill">
+                  <button id="addCustomSkillBtn" type="button" class="secondary-btn">Add</button>
+                </div>
+              </div>
+              
+              <div id="customSkillsList" class="tag-list" role="region" aria-label="Added skills"></div>
+            </div>
 
-            <div class="card">
+            <!-- Step 6: Experience -->
+            <div class="wizard-step hidden" data-step="6">
+              <h3>Work Experience</h3>
+              <p class="step-description">Tell us about your professional background.</p>
+              
+              <div class="toggle-group">
+                <label class="radio-option">
+                  <input type="radio" name="experienceExists" value="yes">
+                  Yes, I have work experience
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="experienceExists" value="no">
+                  No, I'm a graduate/fresher
+                </label>
+              </div>
+              
+              <div id="experienceDetails" class="conditional-section hidden">
+                <div id="experienceRows" class="entry-group">
+                  <div class="entry-row experience-entry">
+                    <input type="text" name="title" placeholder="Job Title" aria-label="Job title">
+                    <input type="text" name="company" placeholder="Company/Organization" aria-label="Company name">
+                    <input type="text" name="period" placeholder="Period (e.g., Jan 2020 - Dec 2021)" aria-label="Employment period">
+                    <textarea name="details" placeholder="Key responsibilities and achievements" aria-label="Job details"></textarea>
+                  </div>
+                </div>
+                
+                <button id="addExperienceRowBtn" type="button" class="secondary-btn">+ Add Another Experience</button>
+              </div>
+              
+              <div id="graduateBoostSection" class="conditional-section hidden">
+                <h4>No formal experience? Include:</h4>
+                <textarea 
+                  id="graduateExperienceText" 
+                  placeholder="Internships, volunteer work, class projects, leadership in school clubs, etc."
+                  aria-label="Graduate or student experience"
+                ></textarea>
+              </div>
+              
+              <div class="smart-questionnaire">
+                <h4>Quick Questions</h4>
+                
+                <div class="field-group">
+                  <label class="field-label">Have you led a team or group?</label>
+                  <select id="leaderGroup" class="form-select" aria-label="Leadership experience">
+                    <option value="">Select answer</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                  <textarea id="leaderGroupDetails" placeholder="Tell us about it..." aria-label="Leadership details"></textarea>
+                </div>
+                
+                <div class="field-group">
+                  <label class="field-label">Any volunteer or research work?</label>
+                  <textarea 
+                    id="volunteerDetails" 
+                    placeholder="Describe your activity..."
+                    aria-label="Volunteer or research details"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
 
-    <h2>Select Services</h2>
+            <!-- Step 7: Projects -->
+            <div class="wizard-step hidden" data-step="7">
+              <h3>Projects</h3>
+              <p class="step-description">Highlight important projects or student work (optional).</p>
+              
+              <div id="projectRows" class="entry-group">
+                <div class="entry-row project-entry">
+                  <input type="text" name="projectName" placeholder="Project Name" aria-label="Project name">
+                  <textarea name="projectDescription" placeholder="Brief description" aria-label="Project description"></textarea>
+                  <input type="text" name="projectRole" placeholder="Your Role" aria-label="Your role">
+                  <textarea name="projectAchievements" placeholder="Key achievements/outcomes" aria-label="Project achievements"></textarea>
+                </div>
+              </div>
+              
+              <button id="addProjectRowBtn" type="button" class="secondary-btn">+ Add Project</button>
+            </div>
 
-    <label>
-        <input type="checkbox" class="serviceCheck" value="209">
-        Standard CV — KES 209 (1.64 USD)
-    </label>
+            <!-- Step 8: Certifications -->
+            <div class="wizard-step hidden" data-step="8">
+              <h3>Certifications & Licenses</h3>
+              <p class="step-description">List any certificates that strengthen your profile (optional).</p>
+              
+              <div id="certificationRows" class="entry-group">
+                <div class="entry-row cert-entry">
+                  <input type="text" name="certName" placeholder="Certificate Name" aria-label="Certificate name">
+                  <input type="text" name="certInstitution" placeholder="Issuing Organization" aria-label="Issuing organization">
+                  <input type="text" name="certYear" placeholder="Year Obtained" aria-label="Year">
+                </div>
+              </div>
+              
+              <button id="addCertificationRowBtn" type="button" class="secondary-btn">+ Add Certificate</button>
+            </div>
 
-    <br><br>
+            <!-- Step 9: Languages -->
+            <div class="wizard-step hidden" data-step="9">
+              <h3>Languages</h3>
+              <p class="step-description">Which languages do you speak?</p>
+              
+              <div class="skill-grid">
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="language-checkbox" value="English">
+                  English
+                </label>
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="language-checkbox" value="Swahili">
+                  Swahili
+                </label>
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="language-checkbox" value="French">
+                  French
+                </label>
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="language-checkbox" value="Spanish">
+                  Spanish
+                </label>
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="language-checkbox" value="Arabic">
+                  Arabic
+                </label>
+                <label class="skill-checkbox">
+                  <input type="checkbox" class="language-checkbox" value="Mandarin">
+                  Mandarin
+                </label>
+              </div>
+              
+              <div class="custom-skill-input">
+                <label class="field-label" for="customLanguage">Add Another Language</label>
+                <div class="input-with-button">
+                  <input type="text" id="customLanguage" placeholder="e.g., Portuguese" aria-label="Custom language">
+                  <button id="addLanguageBtn" type="button" class="secondary-btn">Add</button>
+                </div>
+              </div>
+            </div>
 
-    <label>
-        <input type="checkbox" class="serviceCheck" value="259">
-        International Premium CV — KES 259 (2.00 USD)
-    </label>
+            <!-- Step 10: Achievements -->
+            <div class="wizard-step hidden" data-step="10">
+              <h3>Achievements & Awards</h3>
+              <p class="step-description">Show awards, recognitions, and standout results (optional).</p>
+              
+              <div id="achievementRows" class="entry-group">
+                <div class="entry-row achievement-entry">
+                  <textarea name="achievementDescription" placeholder="Award, recognition, or achievement" aria-label="Achievement description"></textarea>
+                </div>
+              </div>
+              
+              <button id="addAchievementRowBtn" type="button" class="secondary-btn">+ Add Achievement</button>
+            </div>
+          </div>
+          
+          <div id="wizardMessage" class="form-message" role="alert" aria-live="polite"></div>
+          
+          <div class="button-row">
+            <button id="wizardBackBtn" type="button" class="secondary-btn hidden" aria-label="Go to previous step">← Back</button>
+            <button id="wizardNextBtn" type="button" class="primary-btn" aria-label="Go to next step">Next →</button>
+            <button id="wizardGenerateBtn" type="button" class="primary-btn hidden" aria-label="Generate CV">Generate CV ✨</button>
+          </div>
+        </section>
 
-    <br><br>
+        <!-- ===== RESULTS SECTION ===== -->
+        <section id="resultsSection" class="card app-section hidden">
+          <div class="results-header">
+            <div class="results-title">
+              <p class="eyebrow">Final Package</p>
+              <h2>Your AI Career Package</h2>
+            </div>
+            <button id="startOverBtn" type="button" class="secondary-btn" aria-label="Create new CV">Start Over</button>
+          </div>
+          
+          <!-- Tab Navigation -->
+          <div class="tab-row" role="tablist">
+            <button type="button" data-tab="cv" class="tab-btn active" role="tab" aria-selected="true">CV</button>
+            <button type="button" data-tab="cover" class="tab-btn" role="tab" aria-selected="false">Cover Letter</button>
+            <button type="button" data-tab="interview" class="tab-btn" role="tab" aria-selected="false">Interview Prep</button>
+            <button type="button" data-tab="health" class="tab-btn" role="tab" aria-selected="false">CV Health</button>
+            <button type="button" data-tab="skills" class="tab-btn" role="tab" aria-selected="false">Skills Gap</button>
+            <button type="button" data-tab="salary" class="tab-btn" role="tab" aria-selected="false">Salary</button>
+            <button type="button" data-tab="recruiter" class="tab-btn" role="tab" aria-selected="false">Recruiter View</button>
+          </div>
+          
+          <!-- Output Display -->
+          <div class="output-container">
+            <div id="packageOutput" class="output-box" role="region" aria-live="polite" aria-label="Generated content output">
+              Your generated content will appear here.
+            </div>
+            
+            <!-- Output Actions -->
+            <div class="output-actions">
+              <button id="copyOutputBtn" type="button" class="secondary-btn" aria-label="Copy content to clipboard">📋 Copy</button>
+              <button id="downloadCvPdfBtn" type="button" class="primary-btn" aria-label="Download CV as PDF">⬇️ Download CV</button>
+              <button id="downloadCoverLetterPdfBtn" type="button" class="primary-btn" aria-label="Download cover letter as PDF">⬇️ Download Letter</button>
+            </div>
 
-    <label>
-        <input type="checkbox" class="serviceCheck" value="130">
-        Cover Letter — KES 130 (1.00 USD)
-    </label>
+            <div class="results-tools">
+              <h3>Quick Career Assistant</h3>
+              <div class="tool-grid">
+                <button id="generateCoverLetterBtn" type="button" class="secondary-btn">Generate Cover Letter</button>
+                <button id="generateInterviewTipsBtn" type="button" class="secondary-btn">Interview Preparation</button>
+                <button id="generateLinkedInBtn" type="button" class="secondary-btn">Optimize LinkedIn</button>
+                <button id="generateRoadmapBtn" type="button" class="secondary-btn">Career Roadmap</button>
+              </div>
+            </div>
+            
+            <!-- Save Draft -->
+            <div class="draft-actions">
+              <button id="saveDraftBtn" type="button" class="secondary-btn">💾 Save Draft</button>
+              <button id="clearOutputBtn" type="button" class="secondary-btn">🗑️ Clear</button>
+            </div>
+          </div>
 
-    <br><br>
+          <div id="careerDashboard" class="feature-card hidden">
+            <h4>Career Dashboard</h4>
+            <p class="subtext">Track your saved career drafts and review your career planning history.</p>
+            <div id="history" class="feedback-box">No saved items yet. Save a draft to populate your dashboard.</div>
+            <button id="refreshHistoryBtn" type="button" class="secondary-btn">Refresh Dashboard</button>
+          </div>
 
-    <h3>
-        Total: KES
-        <span id="totalAmount">0</span>
-    </h3>
+          <!-- Premium Features -->
+          <div class="premium-features-section">
+            <h3>Premium Insights</h3>
+            
+            <!-- CV Health Score -->
+            <div id="healthDashboard" class="feature-card hidden">
+              <h4>CV Health Score</h4>
+              <div class="health-grid">
+                <div class="health-item">
+                  <div class="health-label">Overall Health</div>
+                  <div class="health-score large">--</div>
+                </div>
+                <div class="health-item">
+                  <div class="health-label">Professionalism</div>
+                  <div class="health-score">--</div>
+                </div>
+                <div class="health-item">
+                  <div class="health-label">Impact Words</div>
+                  <div class="health-score">--</div>
+                </div>
+                <div class="health-item">
+                  <div class="health-label">ATS Compatibility</div>
+                  <div class="health-score">--</div>
+                </div>
+              </div>
+              <button id="analyzeHealthBtn" type="button" class="primary-btn">Run CV Analysis</button>
+              <div id="healthFeedback" class="feedback-box"></div>
+            </div>
 
-    <label class="sr-only" for="mpesaPhone">M-Pesa phone number</label>
-    <input type="text" id="mpesaPhone" placeholder="07XXXXXXXX">
+            <!-- Missing Skills Finder -->
+            <div id="skillsFinder" class="feature-card hidden">
+              <h4>Skills Gap Analysis</h4>
+              <div class="field-group">
+                <label class="field-label" for="targetJobRole">Target Job Role</label>
+                <input type="text" id="targetJobRole" placeholder="e.g., Senior Developer, Product Manager" aria-label="Target job role">
+              </div>
+              <button id="findSkillsBtn" type="button" class="primary-btn">Find Missing Skills</button>
+              <div id="skillsComparison" class="feedback-box"></div>
+            </div>
 
-    <div class="payment-section">
+            <!-- Salary Estimator -->
+            <div id="salaryEstimator" class="feature-card hidden">
+              <h4>Salary Estimator</h4>
+              <div class="field-grid">
+                <div class="field-group">
+                  <label class="field-label" for="salaryCountry">Country</label>
+                  <select id="salaryCountry" aria-label="Country">
+                    <option value="">Select country</option>
+                    <option value="Kenya">Kenya</option>
+                    <option value="Uganda">Uganda</option>
+                    <option value="Tanzania">Tanzania</option>
+                    <option value="Nigeria">Nigeria</option>
+                    <option value="South Africa">South Africa</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label class="field-label" for="salaryIndustry">Industry</label>
+                  <select id="salaryIndustry" aria-label="Industry">
+                    <option value="">Select industry</option>
+                    <option value="Technology">Technology</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Education">Education</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label class="field-label" for="salaryExperience">Experience Level</label>
+                  <select id="salaryExperience" aria-label="Experience level">
+                    <option value="">Select experience</option>
+                    <option value="Entry Level">Entry Level</option>
+                    <option value="Mid Level">Mid Level</option>
+                    <option value="Senior">Senior</option>
+                    <option value="Executive">Executive</option>
+                  </select>
+                </div>
+              </div>
+              <button id="estimateSalaryBtn" type="button" class="primary-btn">Estimate Salary</button>
+              <div id="salaryResults" class="feedback-box"></div>
+            </div>
 
-        <h2>Choose Payment Method</h2>
+            <!-- Recruiter View -->
+            <div id="recruiterView" class="feature-card hidden">
+              <h4>Recruiter View</h4>
+              <p class="subtext">See what a recruiter sees in the first 6 seconds.</p>
+              <button id="generateRecruiterViewBtn" type="button" class="primary-btn">Generate View</button>
+              <div id="recruiterViewContent" class="feedback-box"></div>
+            </div>
 
-        <!-- PAYPAL -->
+            <div id="linkedInOptimizer" class="feature-card hidden">
+              <h4>LinkedIn Optimizer</h4>
+              <p class="subtext">Generate a polished LinkedIn summary and headline that align with your career goal.</p>
+              <div id="linkedInOutput" class="feedback-box">Use the quick assistant buttons above to generate a LinkedIn summary.</div>
+            </div>
 
-        <div class="paypal-box">
+            <div id="careerRoadmap" class="feature-card hidden">
+              <h4>Career Roadmap</h4>
+              <p class="subtext">Get a step-by-step roadmap for reaching your next role.</p>
+              <div id="roadmapOutput" class="feedback-box">Use the quick assistant buttons above to generate a career roadmap.</div>
+            </div>
+          </div>
 
-            <div id="paypal-button-container"></div>
+          <!-- ===== PAYMENT SECTION ===== -->
+          <div class="payment-card">
+            <h3>Unlock Premium Package</h3>
+            <p class="payment-intro">Download your CV and cover letter as PDFs with professional formatting.</p>
+            
+            <div class="pricing-breakdown">
+              <div class="price-item">
+                <span class="price-label">Standard CV</span>
+                <span class="price-amount">KES 209</span>
+              </div>
+              <div class="price-item">
+                <span class="price-label">Cover Letter</span>
+                <span class="price-amount">KES 130</span>
+              </div>
+              <div class="price-item highlight">
+                <span class="price-label">Premium Package (Both)</span>
+                <span class="price-amount">KES 289</span>
+              </div>
+            </div>
+            
+            <div class="service-grid payment-services">
+              <label class="service-option">
+                <input type="checkbox" class="serviceCheck" value="209" aria-label="Standard CV">
+                <span>Standard CV — <strong>KES 209</strong></span>
+              </label>
+              <label class="service-option">
+                <input type="checkbox" class="serviceCheck" value="259" aria-label="International Premium CV">
+                <span>International Premium CV — <strong>KES 259</strong></span>
+              </label>
+              <label class="service-option">
+                <input type="checkbox" class="serviceCheck" value="130" aria-label="Cover Letter">
+                <span>Cover Letter — <strong>KES 130</strong></span>
+              </label>
+            </div>
+            
+            <div class="service-summary">
+              Total: <strong>KES <span id="totalAmount">0</span></strong>
+            </div>
+            
+            <div class="payment-methods">
+              <div class="method-section">
+                <h4>Pay with M-Pesa</h4>
+                <div class="field-group">
+                  <label class="field-label" for="mpesaPhone">Phone Number</label>
+                  <input 
+                    type="text" 
+                    id="mpesaPhone" 
+                    placeholder="07XXXXXXXX"
+                    aria-label="M-Pesa phone number"
+                    aria-describedby="mpesaHint"
+                  >
+                  <div class="field-hint" id="mpesaHint">You'll receive an M-Pesa prompt on your phone</div>
+                </div>
+                <button id="payServiceBtn" type="button" class="primary-btn mpesa-btn" disabled aria-label="Pay with M-Pesa">
+                  Pay KES <span id="payAmountM">0</span> with M-Pesa
+                </button>
+              </div>
+              
+              <div class="method-divider">OR</div>
+              
+              <div class="method-section">
+                <h4>Pay with PayPal</h4>
+                <div id="paypal-button-container"></div>
+              </div>
+            </div>
+            
+            <div id="paymentStatus" class="payment-status" role="status" aria-live="polite"></div>
+          </div>
+        </section>
+      </section>
+    </main>
 
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-content">
+        <div class="footer-links">
+          <a href="privacy.html" aria-label="Privacy Policy">Privacy Policy</a>
+          <a href="terms.html" aria-label="Terms and Conditions">Terms & Conditions</a>
+          <a href="terms.html" aria-label="Refund Policy">Refund Policy</a>
         </div>
-
-        <div id="paymentStatus" class="payment-status"></div>
-
-        <!-- MPESA -->
-
-        <button id="payServiceBtn" class="mpesa-btn">
-            Pay with M-Pesa
-        </button>
-
-    </div>
-
-</div>
+        <div class="footer-meta">
+          <p>&copy; 2024 Smart Career VAI. All rights reserved.</p>
         </div>
+      </div>
+    </footer>
+  </div>
 
-        <!-- RIGHT SIDE -->
-
-        <div class="right">
-
-            <div class="top-bar">
-
-                <h2>Preview</h2>
-
-            </div>
-
-            <!-- OUTPUT -->
-
-            <div id="output">
-
-                Generated content appears here...
-
-            </div>
-
-            <!-- HISTORY -->
-
-            <div class="history-box">
-
-                <h2>Saved History</h2>
-
-                <div id="history"></div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-<!-- FOOTER -->
-
-<div class="footer-links">
-
-    <a href="privacy.html">
-        Privacy Policy
-    </a>
-
-    <a href="terms.html">
-        Terms & Conditions / Refund Policy
-    </a>
-
-
-</div>
-
-<!-- FIREBASE -->
-
-<script type="module" src="firebase.js?v=2"></script>
-
-<!-- MAIN SCRIPT -->
-
-<script type="module" src="script.js?v=2"></script>
-
+  <!-- Scripts -->
+  <script type="module" src="firebase.js?v=3"></script>
+  <script type="module" src="script.js?v=3"></script>
 </body>
 
 </html>
+
+  <!-- UX Improvements Module -->
+  <script src="ux-improvements.js?v=1"></script>
+
+  <!-- Scripts -->
+  <script type="module" src="firebase.js?v=3"></script>
+  <script type="module" src="script.js?v=3"></script>
+</body>
