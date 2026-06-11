@@ -48,6 +48,26 @@ function parseFirebaseConfigJson(rawValue) {
     return parsed;
 }
 
+function parseFirebaseServiceAccount(rawValue) {
+    if (!rawValue) return null;
+    const trimmed = rawValue.trim();
+    if (trimmed.startsWith('{')) {
+        try {
+            return JSON.parse(Buffer.from(trimmed, 'base64').toString('utf8'));
+        } catch (e) {
+            try {
+                return JSON.parse(trimmed);
+            } catch (inner) {
+                console.warn('Firebase service account value is not valid JSON, assuming it is a file path');
+                return rawValue;
+            }
+        }
+    }
+    return rawValue;
+}
+
+let paymentsAvailable = false;
+
 try {
     const envServiceAccount = (firebaseProjectId && firebaseClientEmail && firebasePrivateKey)
         ? {
@@ -69,18 +89,18 @@ try {
             projectId: firebaseProjectId
         });
     } else if (firebaseServiceAccountPath) {
+        const parsedServiceAccount = parseFirebaseServiceAccount(firebaseServiceAccountPath);
         admin.initializeApp({
-            credential: admin.credential.cert(firebaseServiceAccountPath),
+            credential: admin.credential.cert(parsedServiceAccount),
             projectId: firebaseProjectId
         });
-    } else if (firebaseProjectId) {
+    } else if (firebaseProjectId && !firebaseServiceAccountPath) {
         console.warn('⚠️ FIREBASE_PROJECT_ID is set but no service account credentials are configured. Skipping Firebase initialization to avoid default credential fallback.');
     } else {
         console.warn('⚠️ No Firebase configuration found. Set FIREBASE_CONFIG_JSON, FIREBASE_SERVICE_ACCOUNT_PATH, or explicit Firebase env vars (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY).');
     }
 } catch (err) {
-        console.error('Firebase Admin initialization failed:', err.message);
-    }
+    console.error('Firebase Admin initialization failed:', err.message);
 }
 
 const firebaseInitialized = !!admin.apps.length;
