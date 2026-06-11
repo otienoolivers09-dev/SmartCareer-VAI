@@ -11,9 +11,9 @@ import crypto from "crypto";
 import path from "path";
 import admin from "firebase-admin";
 import payments from "./payments-firebase.js";
+import fs from 'fs';
 
 dotenv.config();
-const fs = require('fs');
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
