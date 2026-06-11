@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Job Description Analyzer — Smart Career VAI</title>
+  <link rel="stylesheet" href="style.css?v=3">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="app-header">
+      <div class="brand"><span class="brand-label">Smart Career</span> <span class="brand-highlight">VAI</span></div>
+      <div class="user-panel"><div id="userStatus" class="user-status"></div></div>
+    </header>
+
+    <main class="main-content">
+      <section class="card card-panel">
+        <h1 class="section-heading">Job Description Analyzer</h1>
+        <p class="helper-text">Paste a job advert or description and get an AI-powered match score, strengths, weaknesses and suggested improvements.</p>
+
+        <label class="field-label" for="jobText">Paste job advert</label>
+        <textarea id="jobText" placeholder="Paste the full job advert or job description here..." aria-label="Job description"></textarea>
+        <div class="button-row">
+          <button id="analyzeJobBtn" class="primary-btn">Analyze Job Description</button>
+          <a href="/index.html" class="link-btn">Back to Home</a>
+        </div>
+
+        <div id="jobAnalysisResult" class="card-panel mt-2 hidden"></div>
+        <pre id="jobAnalysisRaw" class="card-panel mt-2 hidden pre-wrap"></pre>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="firebase.js?v=3"></script>
+  <script type="module" src="script.js?v=3"></script>
+</body>
+</html>

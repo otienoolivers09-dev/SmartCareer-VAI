@@ -13,7 +13,7 @@ let API_BASE_URL = (() => {
    if (backendHosts.includes(host)) {
       return window.location.origin;
    }
-   return 'https://smartcareervai.onrender.com';
+   return 'https://api.smartcareervai.com';
 })();
 
 function isLocalHost() {
@@ -53,13 +53,17 @@ export async function fetchWithAuth(url, options = {}) {
 export async function loadAppConfig() {
    const baseUrls = [API_BASE_URL];
    if (isLocalHost()) {
-      const localHost = 'http://127.0.0.1';
-      LOCAL_API_PORTS.forEach(port => {
-         const candidate = `${localHost}:${port}`;
-         if (!baseUrls.includes(candidate)) {
-            baseUrls.push(candidate);
+         // Only probe local backend ports when explicitly enabled (avoid noisy network errors)
+         // Set window.__TRY_LOCAL_API = true in dev to enable probing of local backend ports.
+         if (window.__TRY_LOCAL_API) {
+            const localHost = 'http://127.0.0.1';
+            LOCAL_API_PORTS.forEach(port => {
+               const candidate = `${localHost}:${port}`;
+               if (!baseUrls.includes(candidate)) {
+                  baseUrls.push(candidate);
+               }
+            });
          }
-      });
    }
 
    for (const baseUrl of baseUrls) {

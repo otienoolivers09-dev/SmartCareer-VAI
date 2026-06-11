@@ -13,6 +13,7 @@ let latestCvId = null;
 let hasPaid = false;
 let isSignupMode = false;
 let currentWizardStep = 1;
+let pendingAuthAction = null; // 'upload' | 'build' | null - preserved across auth flow
 
 const assistantResults = {
   currentTab: 'cv',
@@ -168,12 +169,37 @@ function clearFormMessage() {
 
 function initHeroLogic() {
   const heroLoginBtn = document.getElementById('heroLoginBtn');
+  const uploadCvHeroBtn = document.getElementById('uploadCvHeroBtn');
+  const createCvHeroBtn = document.getElementById('createCvHeroBtn');
+  
   if (heroLoginBtn) {
     heroLoginBtn.addEventListener('click', () => {
       const heroSection = document.getElementById('heroSection');
       const authSection = document.getElementById('authSection');
       if (heroSection) heroSection.classList.add('hidden');
       if (authSection) authSection.classList.remove('hidden');
+    });
+  }
+
+  if (uploadCvHeroBtn) {
+    uploadCvHeroBtn.addEventListener('click', () => {
+      const user = getCurrentUser();
+      if (!user) {
+        showSignupForm('upload');
+      } else {
+        showUploadSection();
+      }
+    });
+  }
+
+  if (createCvHeroBtn) {
+    createCvHeroBtn.addEventListener('click', () => {
+      const user = getCurrentUser();
+      if (!user) {
+        showSignupForm('build');
+      } else {
+        showWizardSection();
+      }
     });
   }
 }
@@ -211,6 +237,8 @@ function initSignupChoice() {
 
 function showSignupForm(type) {
   isSignupMode = true;
+  // remember where the user wanted to go so we can continue after auth
+  pendingAuthAction = type || null;
   const authSection = document.getElementById('authSection');
   const heroSection = document.getElementById('heroSection');
   
@@ -260,6 +288,17 @@ async function handleAuthSubmit() {
     }
     emailInput.value = '';
     passwordInput.value = '';
+    // After successful auth we rely on the auth state change listener to show the app.
+    // But also handle any pending action immediately if available.
+    if (pendingAuthAction) {
+      if (pendingAuthAction === 'upload') {
+        showUploadSection();
+      } else if (pendingAuthAction === 'build') {
+        showWizardSection();
+      }
+      pendingAuthAction = null;
+      isSignupMode = false;
+    }
   } catch (error) {
     console.error('Auth error:', error);
     const message = error.message || 'Authentication failed';
@@ -411,6 +450,8 @@ function showLandingPage() {
 function showUploadSection() {
   const appSection = document.getElementById('appSection');
   const authSection = document.getElementById('authSection');
+  const heroSection = document.getElementById('heroSection');
+  if (heroSection) heroSection.classList.add('hidden');
   if (appSection) appSection.classList.remove('hidden');
   if (authSection) authSection.classList.add('hidden');
   showAppPage('uploadSection');
@@ -419,6 +460,8 @@ function showUploadSection() {
 function showWizardSection() {
   const appSection = document.getElementById('appSection');
   const authSection = document.getElementById('authSection');
+  const heroSection = document.getElementById('heroSection');
+  if (heroSection) heroSection.classList.add('hidden');
   if (appSection) appSection.classList.remove('hidden');
   if (authSection) authSection.classList.add('hidden');
   currentWizardStep = 1;
@@ -1202,6 +1245,64 @@ async function handleRecruiterView() {
   }
 }
 
+async function analyzeJobDescription() {
+  const textarea = document.getElementById('jobText');
+  const resultPanel = document.getElementById('jobAnalysisResult');
+  const rawPanel = document.getElementById('jobAnalysisRaw');
+  const jobText = textarea?.value?.trim() || '';
+
+  if (!jobText) {
+    showFormError('Please paste a job advert or description first.');
+    return;
+  }
+
+  showFormMessage('Analyzing job description...');
+  try {
+    const resp = await fetch(apiUrl('/analyze-job'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobText })
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.success) {
+      throw new Error(data.message || 'Job analysis failed');
+    }
+
+    clearFormMessage();
+    if (data.parsed) {
+      const p = data.parsed;
+      resultPanel.classList.remove('hidden');
+      rawPanel.classList.add('hidden');
+      rawPanel.textContent = '';
+      resultPanel.innerHTML = `
+        <div class="analysis-report">
+          <h3>Match Score: ${p.matchScore ?? 'N/A'}%</h3>
+          <div class="analysis-section"><strong>Chance of Interview:</strong> ${p.chanceOfInterview || 'Medium'}</div>
+          <div class="analysis-section"><strong>Strengths</strong>
+            <ul class="analysis-list">${(p.strengths||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul>
+          </div>
+          <div class="analysis-section"><strong>Weaknesses</strong>
+            <ul class="analysis-list">${(p.weaknesses||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul>
+          </div>
+          <div class="analysis-section"><strong>Suggested Improvements</strong>
+            <ol class="analysis-list">${(p.suggestedImprovements||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ol>
+          </div>
+        </div>
+      `;
+    } else {
+      // show raw model output
+      resultPanel.classList.add('hidden');
+      rawPanel.classList.remove('hidden');
+      rawPanel.textContent = data.raw || 'No analysis available.';
+    }
+
+    showSuccessToast('Job analysis complete.');
+  } catch (err) {
+    console.error('Job analysis error:', err);
+    showFormError(err.message || 'Job analysis failed');
+  }
+}
+
 function handleFileUpload(event) {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -1430,6 +1531,44 @@ async function payWithMpesa() {
   }
 }
 
+// ========== SHARE FUNCTIONALITY ==========
+
+function shareOnTwitter() {
+  const text = `Just created a professional CV with AI! 🚀 Check out @SmartCareerVAI - it helped me create an ATS-optimized CV and cover letter. Join 10K+ job seekers accelerating their careers! ${window.location.origin}`;
+  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.origin)}`;
+  window.open(url, '_blank', 'width=600,height=400');
+  showSuccessToast('Opening Twitter share...');
+}
+
+function shareOnLinkedIn() {
+  const text = `I just created my professional CV using AI with Smart Career VAI! The tool helped me:
+- Generate an ATS-optimized CV
+- Create a compelling cover letter  
+- Get interview preparation tips
+
+If you're job hunting, definitely check it out! ${window.location.origin}`;
+  const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}`;
+  window.open(url, '_blank', 'width=600,height=400');
+  showSuccessToast('Opening LinkedIn share...');
+}
+
+function shareViaEmail() {
+  const subject = `Check out Smart Career VAI - AI CV Generator`;
+  const body = `Hey! I just used Smart Career VAI to create my professional CV, cover letter, and got interview tips. It's super easy and uses AI to optimize everything for employers. Check it out: ${window.location.origin}\n\nYou can even try their free ATS checker and CV health analyzer without signing up!`;
+  const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.open(mailtoLink);
+  showSuccessToast('Opening email client...');
+}
+
+function copyShareLink() {
+  const link = window.location.origin;
+  navigator.clipboard.writeText(link).then(() => {
+    showSuccessToast('Link copied! Share it with your friends.');
+  }).catch(() => {
+    showErrorToast('Failed to copy link');
+  });
+}
+
 // ========== INITIALIZATION ==========
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1528,6 +1667,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (generateRecruiterViewBtn) generateRecruiterViewBtn.addEventListener('click', handleRecruiterView);
   if (cvFileInput) cvFileInput.addEventListener('change', handleFileUpload);
   if (startOverBtn) startOverBtn.addEventListener('click', handleStartOver);
+  const analyzeJobBtn = document.getElementById('analyzeJobBtn');
+  if (analyzeJobBtn) analyzeJobBtn.addEventListener('click', analyzeJobDescription);
 
   document.querySelectorAll('.tab-btn').forEach(button => {
     button.addEventListener('click', () => {
@@ -1561,6 +1702,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize auth state listener
   onAuthStateChangedListener((user) => {
     setAppVisibility(!!user);
+    // If user just signed in and had a pending action, continue
+    if (user && pendingAuthAction) {
+      if (pendingAuthAction === 'upload') showUploadSection();
+      else if (pendingAuthAction === 'build') showWizardSection();
+      pendingAuthAction = null;
+      isSignupMode = false;
+    }
   });
   
   // Initialize app config

@@ -58,30 +58,41 @@
       <section id="heroSection" class="hero-landing">
         <div class="hero-container">
           <div class="hero-content">
-            <h1 class="hero-title">Transform Your Career with AI</h1>
-            <p class="hero-subtitle">Create a job-winning CV, cover letter, and interview prep in minutes with AI-powered tools.</p>
+            <h1 class="hero-title">Smart Career VAI</h1>
+            <p class="hero-subtitle">Upload your CV and get everything you need to land your dream job</p>
             
             <div class="hero-features">
               <div class="hero-feature">
                 <span class="feature-icon">✨</span>
-                <span>AI-powered CV generation</span>
+                <span>Professional CV Rewrite</span>
               </div>
               <div class="hero-feature">
                 <span class="feature-icon">📊</span>
-                <span>CV health scores & optimization</span>
+                <span>ATS Score & Optimization</span>
+              </div>
+              <div class="hero-feature">
+                <span class="feature-icon">📝</span>
+                <span>Cover Letter</span>
               </div>
               <div class="hero-feature">
                 <span class="feature-icon">💼</span>
-                <span>Salary estimates & recruiter insights</span>
+                <span>LinkedIn Optimization</span>
+              </div>
+              <div class="hero-feature">
+                <span class="feature-icon">🎤</span>
+                <span>Interview Questions</span>
               </div>
               <div class="hero-feature">
                 <span class="feature-icon">🚀</span>
-                <span>Instant interview preparation</span>
+                <span>Career Roadmap</span>
               </div>
             </div>
             
-            <p class="hero-cta-text">Join thousands of job seekers accelerating their careers.</p>
-            <button id="heroLoginBtn" type="button" class="primary-btn hero-btn" aria-label="Get started">Get Started</button>
+            <p class="hero-cta-text">Join 10K+ job seekers who've transformed their careers</p>
+            <div class="hero-action-row">
+              <button id="uploadCvHeroBtn" type="button" class="primary-btn hero-btn" aria-label="Upload your CV">📤 UPLOAD CV</button>
+              <button id="createCvHeroBtn" type="button" class="secondary-btn hero-btn" aria-label="Create CV from scratch">📝 BUILD NEW CV</button>
+            </div>
           </div>
           
           <div class="hero-stats">
@@ -94,8 +105,8 @@
               <div class="stat-label">User Rating</div>
             </div>
             <div class="stat">
-              <div class="stat-number">3min</div>
-              <div class="stat-label">Average Setup</div>
+              <div class="stat-number">100%</div>
+              <div class="stat-label">Satisfaction</div>
             </div>
           </div>
         </div>
@@ -115,10 +126,40 @@
             <span>100% Satisfaction</span>
           </div>
         </div>
+
+        <!-- Free Tools Section -->
+        <div class="section-break">
+          <div class="text-center">
+            <h2 class="section-heading">Not Ready Yet?</h2>
+            <p class="text-muted">Try these free tools first</p>
+          </div>
+          <div class="feature-grid">
+            <a href="/free-ats-checker.html" class="tool-card ats">
+              <div class="tool-card-icon">✓</div>
+              <div class="tool-card-title">Free ATS Score</div>
+              <div class="tool-card-text">Check if your CV passes ATS</div>
+            </a>
+            <a href="/free-cv-checker.html" class="tool-card cv">
+              <div class="tool-card-icon">🔍</div>
+              <div class="tool-card-title">CV Health Check</div>
+              <div class="tool-card-text">Get instant CV feedback</div>
+            </a>
+            <a href="/blog.html" class="tool-card blog">
+              <div class="tool-card-icon">📚</div>
+              <div class="tool-card-title">Career Blog</div>
+              <div class="tool-card-text">Expert tips & guides</div>
+            </a>
+            <a href="/free-job-analyzer.html" class="tool-card blog">
+              <div class="tool-card-icon">🔎</div>
+              <div class="tool-card-title">Job Description Analyzer</div>
+              <div class="tool-card-text">Paste a job advert and get a match score & suggestions</div>
+            </a>
+          </div>
+        </div>
       </section>
 
       <!-- ===== AUTHENTICATION SECTION ===== -->
-      <section id="authSection" class="card auth-card">
+      <section id="authSection" class="card auth-card hidden">
         <div class="auth-head">
           <div>
             <p class="eyebrow">Welcome back</p>
@@ -727,6 +768,26 @@
               <button id="downloadCoverLetterPdfBtn" type="button" class="primary-btn" aria-label="Download cover letter as PDF">⬇️ Download Letter</button>
             </div>
 
+            <!-- Share Results -->
+            <div class="quote-card">
+              <div class="quote-heading">Share Your Progress</div>
+              <div class="share-row">
+                <button id="shareTwitterBtn" type="button" class="secondary-btn small-btn" onclick="shareOnTwitter()">
+                  𝕏 Share on Twitter
+                </button>
+                <button id="shareLinkedInBtn" type="button" class="secondary-btn small-btn" onclick="shareOnLinkedIn()">
+                  💼 Share on LinkedIn
+                </button>
+                <button id="shareViaEmailBtn" type="button" class="secondary-btn small-btn" onclick="shareViaEmail()">
+                  ✉️ Share via Email
+                </button>
+                <button id="copyLinkBtn" type="button" class="secondary-btn small-btn" onclick="copyShareLink()">
+                  🔗 Copy Link
+                </button>
+              </div>
+              <div class="helper-text">Help your friends land their dream job!</div>
+            </div>
+
             <div class="results-tools">
               <h3>Quick Career Assistant</h3>
               <div class="tool-grid">
@@ -945,11 +1006,3 @@
 </body>
 
 </html>
-
-  <!-- UX Improvements Module -->
-  <script src="ux-improvements.js?v=1"></script>
-
-  <!-- Scripts -->
-  <script type="module" src="firebase.js?v=3"></script>
-  <script type="module" src="script.js?v=3"></script>
-</body>

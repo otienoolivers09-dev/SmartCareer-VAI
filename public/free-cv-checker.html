@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Free CV Health Checker - Get instant feedback on your CV. Check formatting, completeness, and job match. No sign-up required.">
+  <meta name="keywords" content="CV checker, resume review, CV feedback, job application, CV improvement">
+  <title>Free CV Health Checker - Smart Career VAI</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=3">
+  
+  <style>
+    .free-tool-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .tool-hero {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    
+    .tool-hero h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #0f172a;
+    }
+    
+    .tool-hero p {
+      font-size: 1.1rem;
+      color: #64748b;
+      margin-bottom: 1rem;
+    }
+    
+    .badge {
+      display: inline-block;
+      background: #dcfce7;
+      color: #166534;
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-bottom: 2rem;
+      align-items: start;
+    }
+    
+    @media (max-width: 768px) {
+      .two-column {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .health-input-section textarea {
+      min-height: 300px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+    
+    .health-results {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      padding: 2rem;
+      margin-top: 1.5rem;
+    }
+    
+    .health-score {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .health-metric {
+      padding: 1rem;
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.5rem;
+      text-align: center;
+    }
+    
+    .health-metric.good {
+      border-color: #22c55e;
+      background: #f0fdf4;
+    }
+    
+    .health-metric.warning {
+      border-color: #f59e0b;
+      background: #fffbeb;
+    }
+    
+    .health-metric.bad {
+      border-color: #ef4444;
+      background: #fef2f2;
+    }
+    
+    .metric-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    
+    .metric-label {
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-top: 0.25rem;
+    }
+    
+    .feedback-item {
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      border-radius: 0.25rem;
+      border-left: 4px solid;
+    }
+    
+    .feedback-item.critical {
+      border-color: #ef4444;
+      background: #fef2f2;
+      color: #7f1d1d;
+    }
+    
+    .feedback-item.warning {
+      border-color: #f59e0b;
+      background: #fffbeb;
+      color: #78350f;
+    }
+    
+    .feedback-item.good {
+      border-color: #22c55e;
+      background: #f0fdf4;
+      color: #166534;
+    }
+    
+    .faq-section {
+      margin-top: 3rem;
+    }
+    
+    .faq-item {
+      margin-bottom: 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    
+    .faq-question {
+      padding: 1rem;
+      background: #f8fafc;
+      cursor: pointer;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .faq-question:hover {
+      background: #f1f5f9;
+    }
+    
+    .faq-answer {
+      padding: 1rem;
+      border-top: 1px solid #e2e8f0;
+      display: none;
+      color: #475569;
+    }
+    
+    .faq-answer.active {
+      display: block;
+    }
+    
+    .cta-box {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 0.5rem;
+      text-align: center;
+      margin-top: 2rem;
+    }
+    
+    .cta-box h3 {
+      margin-bottom: 0.5rem;
+    }
+    
+    .cta-box p {
+      margin-bottom: 1rem;
+      opacity: 0.95;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="app-header">
+      <div class="brand">
+        <a href="/">
+          <span class="brand-label">Smart Career</span>
+          <span class="brand-highlight">VAI</span>
+        </a>
+      </div>
+      <div class="user-panel">
+        <a href="/" class="text-btn">← Back Home</a>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <div class="free-tool-container">
+        <div class="tool-hero">
+          <span class="badge">✨ FREE TOOL - No Sign Up Required</span>
+          <h1>CV Health Checker</h1>
+          <p>Get comprehensive feedback on your CV quality and completeness</p>
+          <p class="text-muted-small">Analyze formatting, content, and job appeal in seconds</p>
+        </div>
+
+        <div class="two-column">
+          <div class="health-input-section">
+            <h3>Paste Your CV Text</h3>
+            <textarea id="cvText" placeholder="Paste your CV text here to get instant health score and feedback..."></textarea>
+            <button id="checkHealthBtn" class="primary-btn full-width-btn">Check CV Health (Free)</button>
+          </div>
+
+          <div id="healthResults" class="health-results hidden">
+            <h3>CV Health Report</h3>
+            
+            <div class="health-score">
+              <div class="health-metric" id="metric1">
+                <div class="metric-value">0%</div>
+                <div class="metric-label">Overall Health</div>
+              </div>
+              <div class="health-metric" id="metric2">
+                <div class="metric-value">0%</div>
+                <div class="metric-label">Completeness</div>
+              </div>
+              <div class="health-metric" id="metric3">
+                <div class="metric-value">0%</div>
+                <div class="metric-label">Formatting</div>
+              </div>
+              <div class="health-metric" id="metric4">
+                <div class="metric-value">0%</div>
+                <div class="metric-label">Keywords</div>
+              </div>
+            </div>
+
+            <div class="mt-1-5">
+              <h4 class="mb-1">Feedback & Recommendations:</h4>
+              <div id="feedbackList"></div>
+            </div>
+
+            <button id="upgradeBtn" class="primary-btn full-width-btn-large btn-solid-purple">
+              Get AI-Powered Improvements - Create Account
+            </button>
+          </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="faq-section">
+          <h2 class="faq-heading">FAQ About CV Health</h2>
+          
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>What does CV Health Score mean?</span>
+              <span>▼</span>
+            </div>
+            <div class="faq-answer">
+              CV Health Score measures how well your CV is structured and complete. It evaluates formatting clarity, presence of key sections, keyword usage, and overall professionalism. A higher score means better CV quality.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>What's considered a "good" CV health score?</span>
+              <span>▼</span>
+            </div>
+            <div class="faq-answer">
+              70%+ is generally good, 80%+ is very good, and 90%+ is excellent. Don't worry if your score is below 70% - this tool provides specific recommendations to improve it. Most CVs start at 60-75% and can reach 90%+ with adjustments.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>What does "Completeness" measure?</span>
+              <span>▼</span>
+            </div>
+            <div class="faq-answer">
+              Completeness checks for essential CV sections: contact info, professional summary, work experience, education, skills, and achievements. The more complete your CV, the better employers can understand your qualifications.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>Can I improve a low health score?</span>
+              <span>▼</span>
+            </div>
+            <div class="faq-answer">
+              Absolutely! Most CV issues are fixable. Follow the recommendations provided - add missing sections, improve formatting, include relevant keywords, and expand your descriptions. Recheck after each change to see improvement.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>How is this different from the ATS Checker?</span>
+              <span>▼</span>
+            </div>
+            <div class="faq-answer">
+              ATS Checker focuses on technical compatibility with automated systems. CV Health Checker evaluates overall quality, completeness, and appeal. Use both for comprehensive CV optimization!
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA Box -->
+        <div class="cta-box">
+          <h3>Ready to optimize further?</h3>
+          <p>Get AI-powered suggestions to rewrite sections, match job descriptions, and increase your chances of interviews.</p>
+          <button class="btn-accent-white-purple" onclick="window.location.href='/'">Sign Up Free Today</button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <div class="footer-content">
+        <div class="footer-links">
+          <a href="privacy.html">Privacy Policy</a>
+          <a href="terms.html">Terms & Conditions</a>
+        </div>
+        <div class="footer-meta">
+          <p>&copy; 2024 Smart Career VAI. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    function toggleFaq(element) {
+      const answer = element.nextElementSibling;
+      answer.classList.toggle('active');
+      element.querySelector('span:last-child').style.transform = 
+        answer.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0)';
+    }
+
+    document.getElementById('checkHealthBtn').addEventListener('click', checkHealth);
+
+    function checkHealth() {
+      const cvText = document.getElementById('cvText').value.trim();
+      if (!cvText) {
+        alert('Please paste your CV text first');
+        return;
+      }
+
+      const health = calculateHealth(cvText);
+      displayHealth(health);
+    }
+
+    function calculateHealth(text) {
+      const metrics = {
+        overall: 0,
+        completeness: 0,
+        formatting: 0,
+        keywords: 0
+      };
+
+      const feedback = [];
+
+      // Completeness check
+      const hasName = /^[A-Z][a-z]+ [A-Z][a-z]+/m.test(text);
+      const hasEmail = /@/.test(text);
+      const hasPhone = /\d{7,}/.test(text);
+      const hasExperience = /experience|worked|employed|role|position/i.test(text);
+      const hasEducation = /education|degree|university|college|school|certificate/i.test(text);
+      const hasSkills = /skills|technical|proficient|expertise/i.test(text);
+
+      const completeness = [hasName, hasEmail, hasPhone, hasExperience, hasEducation, hasSkills].filter(Boolean).length / 6 * 100;
+      metrics.completeness = Math.round(completeness);
+
+      if (completeness < 0.5) feedback.push({ type: 'critical', text: '❌ Missing key sections (name, email, phone, experience, education, skills). Add these for better impression.' });
+      else if (completeness < 0.8) feedback.push({ type: 'warning', text: '⚠️ Some key sections are missing. Consider adding the complete profile.' });
+      else feedback.push({ type: 'good', text: '✓ All major sections present.' });
+
+      // Formatting check
+      const lines = text.split('\n').length;
+      const avgLineLength = text.length / lines;
+      const formatting = (lines > 5 && avgLineLength < 100) ? 80 : (lines > 3 ? 60 : 40);
+      metrics.formatting = Math.min(100, formatting);
+
+      if (formatting < 50) feedback.push({ type: 'warning', text: '⚠️ Text formatting needs improvement. Use proper line breaks and structure.' });
+      else feedback.push({ type: 'good', text: '✓ Good text structure and formatting.' });
+
+      // Keywords check
+      const keywords = (text.match(/[a-z]+/gi) || []).length;
+      const uniqueKeywords = new Set(text.toLowerCase().match(/[a-z]+/gi) || []).size;
+      const keywordScore = (uniqueKeywords / 100) * 100;
+      metrics.keywords = Math.min(100, Math.round(keywordScore));
+
+      if (metrics.keywords < 30) feedback.push({ type: 'critical', text: '❌ Limited keyword variety. Use industry-specific terms and achievements.' });
+      else if (metrics.keywords < 60) feedback.push({ type: 'warning', text: '⚠️ Could add more descriptive keywords and action verbs.' });
+      else feedback.push({ type: 'good', text: '✓ Good keyword variety and specificity.' });
+
+      // Length check
+      if (text.length < 300) feedback.push({ type: 'warning', text: '⚠️ CV seems quite brief. Expand with more details about your experience and achievements.' });
+      else if (text.length > 5000) feedback.push({ type: 'warning', text: '⚠️ CV seems long. Consider condensing to key highlights.' });
+      else feedback.push({ type: 'good', text: '✓ Good CV length.' });
+
+      // Overall score
+      metrics.overall = Math.round((metrics.completeness + metrics.formatting + metrics.keywords) / 3);
+
+      return { metrics, feedback };
+    }
+
+    function displayHealth(data) {
+      const resultsDiv = document.getElementById('healthResults');
+      
+      // Update metrics
+      document.getElementById('metric1').innerHTML = `<div class="metric-value">${data.metrics.overall}%</div><div class="metric-label">Overall Health</div>`;
+      document.getElementById('metric1').className = `health-metric ${data.metrics.overall >= 70 ? 'good' : data.metrics.overall >= 50 ? 'warning' : 'bad'}`;
+      
+      document.getElementById('metric2').innerHTML = `<div class="metric-value">${data.metrics.completeness}%</div><div class="metric-label">Completeness</div>`;
+      document.getElementById('metric2').className = `health-metric ${data.metrics.completeness >= 70 ? 'good' : data.metrics.completeness >= 50 ? 'warning' : 'bad'}`;
+      
+      document.getElementById('metric3').innerHTML = `<div class="metric-value">${data.metrics.formatting}%</div><div class="metric-label">Formatting</div>`;
+      document.getElementById('metric3').className = `health-metric ${data.metrics.formatting >= 70 ? 'good' : data.metrics.formatting >= 50 ? 'warning' : 'bad'}`;
+      
+      document.getElementById('metric4').innerHTML = `<div class="metric-value">${data.metrics.keywords}%</div><div class="metric-label">Keywords</div>`;
+      document.getElementById('metric4').className = `health-metric ${data.metrics.keywords >= 70 ? 'good' : data.metrics.keywords >= 50 ? 'warning' : 'bad'}`;
+
+      // Update feedback
+      const feedbackList = document.getElementById('feedbackList');
+      feedbackList.innerHTML = data.feedback.map(f => 
+        `<div class="feedback-item ${f.type}">${f.text}</div>`
+      ).join('');
+
+      resultsDiv.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

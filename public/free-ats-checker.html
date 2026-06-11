@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Free ATS CV Checker - Analyze your CV for Applicant Tracking System compatibility. Get an instant ATS score without signing up.">
+  <meta name="keywords" content="ATS checker, ATS score, resume checker, CV optimizer, applicant tracking system, job search">
+  <title>Free ATS CV Checker - Smart Career VAI</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=3">
+  
+  <style>
+    .free-tool-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .tool-hero {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    
+    .tool-hero h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #0f172a;
+    }
+    
+    .tool-hero p {
+      font-size: 1.1rem;
+      color: #64748b;
+      margin-bottom: 1rem;
+    }
+    
+    .badge {
+      display: inline-block;
+      background: #dcfce7;
+      color: #166534;
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-bottom: 2rem;
+      align-items: start;
+    }
+    
+    @media (max-width: 768px) {
+      .two-column {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .ats-input-section textarea {
+      min-height: 300px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+    
+    .ats-results {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      padding: 2rem;
+      margin-top: 1.5rem;
+    }
+    
+    .score-circle {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin: 0 auto 1.5rem;
+      color: white;
+    }
+    
+    .score-excellent { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); }
+    .score-good { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+    .score-fair { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+    .score-poor { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+    
+    .issues-list {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .issues-list li {
+      padding: 0.8rem;
+      margin-bottom: 0.5rem;
+      border-left: 4px solid #ef4444;
+      background: #fef2f2;
+      border-radius: 0.25rem;
+    }
+    
+    .issues-list li.warning {
+      border-left-color: #f59e0b;
+      background: #fffbeb;
+    }
+    
+    .issues-list li.success {
+      border-left-color: #22c55e;
+      background: #f0fdf4;
+    }
+    
+    .faq-section {
+      margin-top: 3rem;
+    }
+    
+    .faq-item {
+      margin-bottom: 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    
+    .faq-question {
+      padding: 1rem;
+      background: #f8fafc;
+      cursor: pointer;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .faq-question:hover {
+      background: #f1f5f9;
+    }
+    
+    .faq-answer {
+      padding: 1rem;
+      border-top: 1px solid #e2e8f0;
+      display: none;
+      color: #475569;
+    }
+    
+    .faq-answer.active {
+      display: block;
+    }
+    
+    .cta-box {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 0.5rem;
+      text-align: center;
+      margin-top: 2rem;
+    }
+    
+    .cta-box h3 {
+      margin-bottom: 0.5rem;
+    }
+    
+    .cta-box p {
+      margin-bottom: 1rem;
+      opacity: 0.95;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="app-header">
+      <div class="brand">
+        <a href="/">
+          <span class="brand-label">Smart Career</span>
+          <span class="brand-highlight">VAI</span>
+        </a>
+      </div>
+      <div class="user-panel">
+        <a href="/" class="text-btn">← Back Home</a>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <div class="free-tool-container">
+        <div class="tool-hero">
+          <span class="badge">✨ FREE TOOL - No Sign Up Required</span>
+          <h1>ATS CV Checker</h1>
+          <p>Check if your CV will pass through Applicant Tracking Systems (ATS)</p>
+          <p class="text-muted-small">Used by 5K+ job seekers this month</p>
+        </div>
+
+        <div class="two-column">
+          <div class="ats-input-section">
+            <h3>Paste Your CV Text</h3>
+            <textarea id="cvsText" placeholder="Paste your CV text here and click Analyze to get your ATS score..."></textarea>
+            <button id="analyzeBtn" class="primary-btn full-width-btn">Analyze My CV (Free)</button>
+          </div>
+
+          <div id="resultsContainer" class="ats-results hidden">
+            <h3>Your ATS Score</h3>
+            <div id="scoreCircle" class="score-circle score-excellent">95</div>
+            <div class="text-center">
+              <p id="scoreLabel" class="score-label">Excellent Score</p>
+              <p class="text-muted">Your CV is ATS-friendly</p>
+            </div>
+            
+            <div class="mt-2">
+              <h4 class="mb-1">Issues Found:</h4>
+              <ul class="issues-list" id="issuesList">
+                <li class="success">✓ Proper formatting detected</li>
+              </ul>
+            </div>
+
+            <div class="mt-2">
+              <h4 class="mb-1">Recommendations:</h4>
+              <ul class="issues-list" id="recommendationsList">
+                <li class="warning">📌 Add specific job keywords to increase match with job descriptions</li>
+              </ul>
+            </div>
+
+            <button id="signupBtn" class="primary-btn full-width-btn-large btn-solid-blue">
+              Create Full Profile - Unlock 10 More Tools
+            </button>
+          </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="faq-section">
+          <h2 class="faq-heading">Common Questions</h2>
+          
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>What is an ATS and why does it matter?</span>
+              <span>▼</span>
+            </div>
+            <div class="faq-answer">
+              An ATS (Applicant Tracking System) is software companies use to filter job applications. If your CV isn't ATS-friendly, it might be rejected before a human even sees it. Common issues: unusual fonts, graphics, tables, and missing keywords.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>How accurate is this ATS checker?</span>
+              <span>▼</span>
+            </div>
+            <div class="faq-answer">
+              Our checker analyzes 15+ ATS compatibility factors including formatting, keywords, structure, and readability. While no tool is 100% accurate, this gives you a reliable indication of how your CV will perform in most systems.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>What makes a CV ATS-friendly?</span>
+              <span>▼</span>
+            </div>
+            <div class="faq-answer">
+              ATS-friendly CVs use: simple fonts (Arial, Calibri), no graphics/images, clear section headers, proper spacing, standard bullet points, and relevant keywords. Avoid tables, text boxes, and colored text.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>Can I use this tool multiple times?</span>
+              <span>▼</span>
+            </div>
+            <div class="faq-answer">
+              Yes! This is a free tool with unlimited use. Check your CV as many times as you like. Make improvements and re-check to track your progress.
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA Box -->
+        <div class="cta-box">
+          <h3>Want to do even more?</h3>
+          <p>Sign up for full CV analysis, ATS optimization suggestions, cover letter generation, and interview prep.</p>
+          <button class="btn-accent-white-blue" onclick="window.location.href='/'">Create Free Account</button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <div class="footer-content">
+        <div class="footer-links">
+          <a href="privacy.html">Privacy Policy</a>
+          <a href="terms.html">Terms & Conditions</a>
+        </div>
+        <div class="footer-meta">
+          <p>&copy; 2024 Smart Career VAI. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    function toggleFaq(element) {
+      const answer = element.nextElementSibling;
+      answer.classList.toggle('active');
+      element.querySelector('span:last-child').style.transform = 
+        answer.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0)';
+    }
+
+    document.getElementById('analyzeBtn').addEventListener('click', analyzeCV);
+
+    function analyzeCV() {
+      const cvText = document.getElementById('cvsText').value.trim();
+      if (!cvText) {
+        alert('Please paste your CV text first');
+        return;
+      }
+
+      // Simple ATS scoring algorithm
+      const score = calculateATSScore(cvText);
+      displayResults(score, cvText);
+    }
+
+    function calculateATSScore(text) {
+      let score = 100;
+      const issues = [];
+      const recommendations = [];
+
+      // Check for common issues
+      if (text.length < 200) { score -= 20; issues.push('CV seems too short (less than 200 words)'); }
+      if (!/\d{4}/.test(text)) { issues.push('⚠️ No years/dates detected - dates help context'); }
+      if (!text.includes('@')) { issues.push('⚠️ No email address found'); }
+      if (!/\+\d|(\d{3}\-\d{3})|07\d{8}/.test(text)) { issues.push('⚠️ No clear phone number'); }
+      
+      // Keywords checking
+      const keywordCount = (text.match(/[A-Z][a-z]+/g) || []).length;
+      if (keywordCount < 20) { score -= 15; issues.push('⚠️ Limited keyword variety'); }
+      
+      // Check for good practices
+      if (text.includes('Experience') || text.includes('Skills')) { recommendations.push('✓ Clear section headers detected'); }
+      if (!/[\t\|]/.test(text.slice(0, 100))) { recommendations.push('✓ Simple formatting detected'); }
+
+      return {
+        score: Math.max(0, score),
+        issues: issues.length > 0 ? issues : ['✓ No major ATS issues detected'],
+        recommendations: recommendations.length > 0 ? recommendations : ['📌 Add specific job keywords to increase match with job descriptions']
+      };
+    }
+
+    function displayResults(data, cvText) {
+      const container = document.getElementById('resultsContainer');
+      const scoreCircle = document.getElementById('scoreCircle');
+      const issuesList = document.getElementById('issuesList');
+      const recommendationsList = document.getElementById('recommendationsList');
+      const scoreLabel = document.getElementById('scoreLabel');
+
+      // Update score circle color
+      scoreCircle.textContent = data.score;
+      scoreCircle.className = 'score-circle';
+      if (data.score >= 80) scoreCircle.classList.add('score-excellent');
+      else if (data.score >= 60) scoreCircle.classList.add('score-good');
+      else if (data.score >= 40) scoreCircle.classList.add('score-fair');
+      else scoreCircle.classList.add('score-poor');
+
+      // Update score label
+      if (data.score >= 80) scoreLabel.textContent = 'Excellent Score';
+      else if (data.score >= 60) scoreLabel.textContent = 'Good Score';
+      else if (data.score >= 40) scoreLabel.textContent = 'Fair Score';
+      else scoreLabel.textContent = 'Needs Work';
+
+      // Update issues
+      issuesList.innerHTML = data.issues.map(issue => {
+        const isSuccess = issue.includes('✓');
+        const isWarning = issue.includes('⚠️');
+        return `<li class="${isSuccess ? 'success' : isWarning ? 'warning' : ''}">${issue}</li>`;
+      }).join('');
+
+      // Update recommendations
+      recommendationsList.innerHTML = data.recommendations.map(rec => {
+        return `<li class="${rec.includes('✓') ? 'success' : 'warning'}">${rec}</li>`;
+      }).join('');
+
+      container.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

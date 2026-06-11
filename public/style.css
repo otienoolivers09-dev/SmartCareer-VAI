@@ -179,18 +179,233 @@ body::after {
   background-clip: text;
 }
 
-.user-panel {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
+  .brand a {
+    text-decoration: none;
+    color: inherit;
+  }
 
-.user-status {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
+  .text-center {
+    text-align: center;
+  }
 
-/* ========== HIDDEN ========== */
+  .text-muted {
+    color: var(--text-muted);
+  }
+
+  .text-muted-small {
+    font-size: 0.95rem;
+    color: #94a3b8;
+  }
+
+  .text-dark {
+    color: #1e293b;
+  }
+
+  .full-width-btn {
+    width: 100%;
+    margin-top: 1rem;
+  }
+
+  .full-width-btn-large {
+    width: 100%;
+    margin-top: 1.5rem;
+  }
+
+  .mt-2 {
+    margin-top: 2rem;
+  }
+
+  .mt-1-5 {
+    margin-top: 1.5rem;
+  }
+
+  .mb-1 {
+    margin-bottom: 1rem;
+  }
+
+  .section-break {
+    margin-top: 4rem;
+    padding-top: 3rem;
+    border-top: 2px solid #e2e8f0;
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .tool-card {
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s;
+    display: block;
+  }
+
+  .tool-card-icon {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .tool-card-title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .tool-card-text {
+    font-size: 0.9rem;
+    color: #64748b;
+  }
+
+  .tool-card.ats {
+    background: #f0fdf4;
+    border: 2px solid #22c55e;
+  }
+
+  .tool-card.cv {
+    background: #eff6ff;
+    border: 2px solid #3b82f6;
+  }
+
+  .tool-card.blog {
+    background: #fef3c7;
+    border: 2px solid #f59e0b;
+  }
+
+  .card-panel {
+    background: #f8fafc;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    margin: 2rem 0;
+  }
+
+  .card-panel-alt {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    margin: 2rem 0;
+  }
+
+  .card-panel-note {
+    background: #fef2f2;
+    border-left: 4px solid #2563eb;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    margin: 2rem 0;
+  }
+
+  .section-heading {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .btn-accent-white-blue,
+  .btn-accent-white-purple,
+  .btn-accent-white-red,
+  .btn-accent-white-navy {
+    background: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .btn-accent-white-blue { color: #2563eb; }
+  .btn-accent-white-purple { color: #7c3aed; }
+  .btn-accent-white-red { color: #dc2626; }
+  .btn-accent-white-navy { color: #1d4ed8; }
+
+  .text-success {
+    color: var(--success);
+  }
+
+  .pro-tip-list {
+    color: #64748b;
+    line-height: 1.8;
+  }
+
+  .faq-heading {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .card-title-reset {
+    margin-top: 0;
+  }
+
+  .btn-solid-blue {
+    background: #2563eb;
+    color: white;
+  }
+
+  .btn-solid-purple {
+    background: #7c3aed;
+    color: white;
+  }
+
+  .btn-solid-red {
+    background: #dc2626;
+    color: white;
+  }
+
+  .quote-card {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: #f0f9ff;
+    border-radius: 0.5rem;
+    border-left: 4px solid #3b82f6;
+  }
+
+  .quote-heading {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: #0f172a;
+  }
+
+  .share-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .small-btn {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+  }
+
+  .helper-text {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-top: 0.5rem;
+  }
+
+  .analysis-report {
+    padding: 1rem;
+    background: rgba(255,255,255,0.08);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .analysis-section {
+    margin-top: 1rem;
+  }
+
+  .analysis-list {
+    margin-top: 0.5rem;
+    padding-left: 1.25rem;
+    color: var(--text-secondary);
+  }
+
+  .pre-wrap {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
 
 .hidden {
   display: none !important;
@@ -431,6 +646,15 @@ button:disabled {
   color: var(--text-muted);
   margin: 0.5rem 0;
   font-size: 0.95rem;
+}
+
+.hero-action-row {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  align-items: center;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .hero-btn {

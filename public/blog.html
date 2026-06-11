@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Smart Career Blog - Expert tips on CV writing, ATS optimization, job search strategies, and career advice for job seekers in Kenya and beyond.">
+  <meta name="keywords" content="CV tips, job search advice, ATS optimization, career guidance, resume writing">
+  <title>Career Blog - Smart Career VAI</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=3">
+  
+  <style>
+    .blog-container { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+    .blog-hero { text-align: center; margin-bottom: 3rem; }
+    .blog-hero h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; color: #0f172a; }
+    .blog-hero p { font-size: 1.1rem; color: #64748b; }
+    .search-bar { margin: 2rem 0; display: flex; gap: 0.5rem; }
+    .search-bar input { flex: 1; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; font-size: 1rem; }
+    .search-bar button { padding: 0.75rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; }
+    .articles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2rem; margin: 2rem 0; }
+    .article-card { background: white; border: 1px solid #e2e8f0; border-radius: 0.5rem; overflow: hidden; transition: box-shadow 0.3s; }
+    .article-card:hover { box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+    .article-image { width: 100%; height: 180px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+    .article-content { padding: 1.5rem; }
+    .article-category { font-size: 0.8rem; font-weight: 600; color: #3b82f6; text-transform: uppercase; margin-bottom: 0.5rem; }
+    .article-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; color: #0f172a; }
+    .article-excerpt { color: #64748b; font-size: 0.95rem; margin-bottom: 1rem; line-height: 1.6; }
+    .article-meta { display: flex; justify-content: space-between; font-size: 0.85rem; color: #94a3b8; }
+    .read-more { color: #3b82f6; font-weight: 600; cursor: pointer; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="app-header">
+      <div class="brand">
+        <a href="/">
+          <span class="brand-label">Smart Career</span>
+          <span class="brand-highlight">VAI</span>
+        </a>
+      </div>
+      <div class="user-panel">
+        <a href="/" class="text-btn">← Back Home</a>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <div class="blog-container">
+        <div class="blog-hero">
+          <h1>Career Blog & Resources</h1>
+          <p>Expert tips, guides, and strategies to accelerate your job search and career growth</p>
+        </div>
+
+        <div class="search-bar">
+          <input type="text" id="searchInput" placeholder="Search articles..." onkeyup="filterArticles()">
+          <button onclick="filterArticles()">Search</button>
+        </div>
+
+        <div class="articles-grid" id="articlesGrid">
+          <!-- Articles will be inserted here -->
+        </div>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <div class="footer-content">
+        <div class="footer-links">
+          <a href="privacy.html">Privacy Policy</a>
+          <a href="terms.html">Terms & Conditions</a>
+        </div>
+        <div class="footer-meta">
+          <p>&copy; 2024 Smart Career VAI. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const articles = [
+      {
+        id: 1,
+        title: "How to Write a CV with No Experience",
+        category: "CV Writing",
+        excerpt: "Starting your career journey? Learn how to craft a compelling CV that highlights your education, projects, and skills even without professional experience.",
+        date: "March 15, 2024",
+        readTime: "5 min read"
+      },
+      {
+        id: 2,
+        title: "ATS Optimization Guide: Pass Automated Systems",
+        category: "Job Search",
+        excerpt: "Discover the secrets of ATS-friendly CVs. Learn what these systems look for and how to format your CV to pass automated screening and reach hiring managers.",
+        date: "March 12, 2024",
+        readTime: "8 min read"
+      },
+      {
+        id: 3,
+        title: "Common CV Mistakes That Cost You Interviews",
+        category: "CV Writing",
+        excerpt: "Avoid these 10 critical mistakes that recruiters see daily. From formatting errors to keyword problems, learn what's costing you interview opportunities.",
+        date: "March 10, 2024",
+        readTime: "6 min read"
+      },
+      {
+        id: 4,
+        title: "Best CV Format in Kenya - What Employers Expect",
+        category: "Local Guide",
+        excerpt: "Kenya's job market has specific expectations for CVs. Learn the preferred format, tone, and structure that resonates with Kenyan employers and recruiters.",
+        date: "March 8, 2024",
+        readTime: "7 min read"
+      },
+      {
+        id: 5,
+        title: "How to Write a Cover Letter That Gets Noticed",
+        category: "Cover Letter",
+        excerpt: "Your cover letter is your first chance to impress. Learn the formula for writing compelling cover letters that make recruiters want to read your CV.",
+        date: "March 5, 2024",
+        readTime: "6 min read"
+      },
+      {
+        id: 6,
+        title: "Interview Prep: Questions and Answers Based on Your CV",
+        category: "Interview",
+        excerpt: "Prepare for your upcoming interview with common questions recruiters ask based on CV content. Get sample answers and tips to ace your interview.",
+        date: "March 1, 2024",
+        readTime: "9 min read"
+      },
+      {
+        id: 7,
+        title: "Quantifying Your Achievements on Your CV",
+        category: "CV Writing",
+        excerpt: "Numbers speak louder than words. Learn how to quantify your achievements with metrics and data to make your CV stand out from competitors.",
+        date: "February 28, 2024",
+        readTime: "5 min read"
+      },
+      {
+        id: 8,
+        title: "Salary Negotiation: Using Your CV as Leverage",
+        category: "Career Growth",
+        excerpt: "Your CV is your value proposition. Learn how to use your achievements and skills to negotiate a better salary in your job offer.",
+        date: "February 25, 2024",
+        readTime: "7 min read"
+      },
+      {
+        id: 9,
+        title: "LinkedIn Profile vs CV: How to Keep Them Aligned",
+        category: "Job Search",
+        excerpt: "Your LinkedIn profile and CV should tell the same story. Discover how to keep them consistent and complementary for maximum impact.",
+        date: "February 22, 2024",
+        readTime: "5 min read"
+      },
+      {
+        id: 10,
+        title: "Job Market Trends 2024: What Skills Are In Demand",
+        category: "Career Growth",
+        excerpt: "Stay ahead of the curve. Learn which skills are trending in 2024 and how to highlight them on your CV to stay competitive.",
+        date: "February 20, 2024",
+        readTime: "8 min read"
+      }
+    ];
+
+    function renderArticles(articlesToShow) {
+      const grid = document.getElementById('articlesGrid');
+      grid.innerHTML = articlesToShow.map(article => `
+        <article class="article-card">
+          <div class="article-image">📝</div>
+          <div class="article-content">
+            <div class="article-category">${article.category}</div>
+            <h3 class="article-title">${article.title}</h3>
+            <p class="article-excerpt">${article.excerpt}</p>
+            <div class="article-meta">
+              <span>${article.date}</span>
+              <span>${article.readTime}</span>
+            </div>
+            <a href="#" class="read-more">Read More →</a>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function filterArticles() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = articles.filter(article =>
+        article.title.toLowerCase().includes(searchTerm) ||
+        article.excerpt.toLowerCase().includes(searchTerm) ||
+        article.category.toLowerCase().includes(searchTerm)
+      );
+      renderArticles(filtered.length > 0 ? filtered : articles);
+    }
+
+    // Initial render
+    renderArticles(articles);
+  </script>
+</body>
+</html>
