@@ -1,4 +1,4 @@
-import { login, registerUser, logout, onAuthStateChangedListener, getCurrentUser, getFirebaseToken } from './auth.js';
+﻿import { login, registerUser, logout, onAuthStateChangedListener, getCurrentUser, getFirebaseToken } from './auth.js';
 import { apiUrl, fetchWithAuth, loadAppConfig, loadPayPalSdk, showPaymentStatus, normalizePhoneNumber, updateTotalAmount, downloadTextAsPdf } from './api.js?v=3';
 
 /* ========================================
@@ -1306,35 +1306,11 @@ async function analyzeJobDescription() {
   }
 }
 
-async function ensurePdfJs() {
-  const existing = window.pdfjsLib || window.pdfjs || window.PDFJS || window['PDFJS'] || window['pdfjs-dist/build/pdf'] || globalThis.pdfjsLib || globalThis.pdfjs || globalThis.PDFJS || globalThis['pdfjs-dist/build/pdf'];
-  if (existing && typeof existing.getDocument === 'function') {
-    return existing;
-  }
-
-  await new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js';
-    script.crossOrigin = 'anonymous';
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load PDF.js library from CDN'));
-    document.head.appendChild(script);
-  });
-
-  const loaded = window.pdfjsLib || window.pdfjs || window.PDFJS || window['PDFJS'] || window['pdfjs-dist/build/pdf'] || globalThis.pdfjsLib || globalThis.pdfjs || globalThis.PDFJS || globalThis['pdfjs-dist/build/pdf'];
-  if (!loaded || typeof loaded.getDocument !== 'function') {
+async function extractTextFromPdf(arrayBuffer) {
+  const pdfjs = window.pdfjsLib || window.pdfjs || window.PDFJS || window['PDFJS'] || window['pdfjs-dist/build/pdf'];
+  if (!pdfjs || typeof pdfjs.getDocument !== 'function') {
     throw new Error('PDF extraction library is unavailable.');
   }
-
-  globalThis.pdfjsLib = loaded;
-  globalThis.PDFJS = loaded;
-  window.pdfjsLib = loaded;
-  window.PDFJS = loaded;
-  return loaded;
-}
-
-async function extractTextFromPdf(arrayBuffer) {
-  const pdfjs = await ensurePdfJs();
 
   if (pdfjs.GlobalWorkerOptions) {
     pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -1813,3 +1789,4 @@ document.addEventListener('DOMContentLoaded', () => {
 // Global function exports for inline handlers
 window.fillExample = fillExample;
 window.closeSignupChoice = closeSignupChoice;
+

@@ -48,13 +48,26 @@ async function createPayment(data) {
 }
 
 async function listPayments({ limit = 50, offset = 0, user_id, cv_id } = {}) {
-  let query = collections.payments().orderBy("createdAt", "desc");
+  let query = collections.payments();
+  const filterCvLocally = Boolean(user_id && cv_id);
+
   if (user_id) query = query.where("user_id", "==", user_id);
-  if (cv_id) query = query.where("cv_id", "==", cv_id);
+  if (cv_id && !filterCvLocally) query = query.where("cv_id", "==", cv_id);
+
+  if (!user_id && !cv_id) {
+    query = query.orderBy("createdAt", "desc");
+  }
+
   if (offset) query = query.offset(offset);
-  if (limit) query = query.limit(limit);
+  if (limit) query = query.limit(filterCvLocally ? Math.max(limit, 100) : limit);
   const snapshot = await query.get();
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  let docs = snapshot.docs;
+  if (filterCvLocally) {
+    docs = docs.filter(doc => doc.data()?.cv_id === cv_id);
+  }
+
+  return docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
 async function getPaymentByOrderId(orderId) {
