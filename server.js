@@ -228,8 +228,9 @@ app.use(cors({
 }));
 
 // Request size limits
+// Increase body size limits to allow uploaded CVs / larger payloads while still protecting other endpoints.
 app.use(express.json({ 
-    limit: '100kb',
+    limit: '1mb',
     verify: (req, res, buf) => {
         try {
             req.rawBody = buf && buf.toString('utf8');
@@ -239,7 +240,7 @@ app.use(express.json({
     }
 }));
 
-app.use(express.urlencoded({ extended: false, limit: '100kb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
 // Rate limiting - API endpoints
 const apiLimiter = rateLimit({
@@ -616,14 +617,28 @@ app.post("/generate-cv", apiLimiter, verifyFirebaseToken, async (req, res) => {
             throw new Error('OpenAI returned no content');
         }
 
+        // Log request diagnostic info to help debug client 500s (avoid printing user data)
+        try {
+            const rawLen = req.rawBody ? req.rawBody.length : undefined;
+            console.log('generate-cv request', {
+                userId: req.userId || null,
+                bodyKeys: Object.keys(value || {}),
+                rawBodyLength: rawLen
+            });
+        } catch (e) {
+            // ignore logging errors
+        }
+
         const fullCv = completion.choices[0].message.content || "";
         const cvId = `cv_${Date.now()}`;
 
         // Persist the generated CV server-side (so full content can be unlocked after payment)
         try {
+            // Persist only metadata and length to avoid storing huge content accidentally in logs
             await payments.createCV({ cv_id: cvId, user_id: req.userId, content: fullCv });
+            console.log('Persisted CV metadata', { cvId, userId: req.userId, contentLength: fullCv.length });
         } catch (e) {
-            console.error('Failed to persist CV:', e.message);
+            console.error('Failed to persist CV:', e && e.message ? e.message : e);
         }
 
         // Check whether the user has a completed payment
