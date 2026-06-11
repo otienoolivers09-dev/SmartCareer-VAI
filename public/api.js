@@ -2,8 +2,12 @@ import { getFirebaseToken } from './auth.js';
 
 const LOCAL_API_PORTS = [3000, 3001, 3002];
 let API_BASE_URL = (() => {
+   if (window.__API_BASE_URL) {
+      return window.__API_BASE_URL;
+   }
    const host = window.location.hostname;
-   if (host === 'localhost' || host === '127.0.0.1' || window.location.protocol === 'file:') {
+   const isLocal = host === 'localhost' || host === '127.0.0.1' || window.location.protocol === 'file:';
+   if (isLocal && window.__TRY_LOCAL_API) {
       return 'http://127.0.0.1:3000';
    }
    const backendHosts = [
@@ -52,18 +56,14 @@ export async function fetchWithAuth(url, options = {}) {
 
 export async function loadAppConfig() {
    const baseUrls = [API_BASE_URL];
-   if (isLocalHost()) {
-         // Only probe local backend ports when explicitly enabled (avoid noisy network errors)
-         // Set window.__TRY_LOCAL_API = true in dev to enable probing of local backend ports.
-         if (window.__TRY_LOCAL_API) {
-            const localHost = 'http://127.0.0.1';
-            LOCAL_API_PORTS.forEach(port => {
-               const candidate = `${localHost}:${port}`;
-               if (!baseUrls.includes(candidate)) {
-                  baseUrls.push(candidate);
-               }
-            });
+   if (isLocalHost() && window.__TRY_LOCAL_API) {
+      const localHost = 'http://127.0.0.1';
+      LOCAL_API_PORTS.forEach(port => {
+         const candidate = `${localHost}:${port}`;
+         if (!baseUrls.includes(candidate)) {
+            baseUrls.push(candidate);
          }
+      });
    }
 
    for (const baseUrl of baseUrls) {

@@ -79,11 +79,15 @@ try {
         console.warn('⚠️ No Firebase configuration found. Set FIREBASE_CONFIG_JSON, FIREBASE_SERVICE_ACCOUNT_PATH, or explicit Firebase env vars (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY).');
     }
 } catch (err) {
-    console.error('Firebase Admin initialization failed:', err.message);
+        console.error('Firebase Admin initialization failed:', err.message);
+    }
 }
 
 const firebaseInitialized = !!admin.apps.length;
-let paymentsAvailable = false;
+console.log(`Firebase initialized: ${firebaseInitialized}`);
+console.log(`Firebase project id: ${firebaseProjectId || '<none>'}`);
+console.log(`Firebase client email set: ${Boolean(firebaseClientEmail)}`);
+console.log(`Firebase private key set: ${Boolean(firebasePrivateKey)}`);
 
 /* =========================
    SECURITY MIDDLEWARE
@@ -105,7 +109,7 @@ app.use((req, res, next) => {
     const nonce = res.locals.nonce;
     res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://www.paypal.com https://www.paypalobjects.com https://sb.paypal.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob:;"
+        "default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://www.paypal.com https://www.paypalobjects.com https://sb.paypal.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob:; connect-src 'self' https://api.smartcareervai.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://www.googleapis.com https://api-m.paypal.com https://api-m.sandbox.paypal.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://images.unsplash.com https://www.paypalobjects.com https://www.paypal.com https://www.sandbox.paypal.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     );
     next();
 });
