@@ -13,6 +13,7 @@ import admin from "firebase-admin";
 import payments from "./payments-firebase.js";
 
 dotenv.config();
+const fs = require('fs');
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -51,18 +52,32 @@ function parseFirebaseConfigJson(rawValue) {
 function parseFirebaseServiceAccount(rawValue) {
     if (!rawValue) return null;
     const trimmed = rawValue.trim();
-    if (trimmed.startsWith('{')) {
-        try {
-            return JSON.parse(Buffer.from(trimmed, 'base64').toString('utf8'));
-        } catch (e) {
+    // Attempt multiple parse strategies:
+    // 1. If it looks like JSON, parse it (and attempt to decode if it's base64 encoded JSON).
+    // 2. If it looks like base64, decode then parse.
+    // 3. Otherwise assume it's a file path to a service account JSON file.
+    try {
+        if (trimmed.startsWith('{')) {
+            // Plain JSON string
+            return JSON.parse(trimmed);
+        }
+
+        // If it only contains base64 characters (and maybe padding), try decoding
+        const base64Candidate = /^[A-Za-z0-9+/=\s]+$/.test(trimmed.replace(/\r?\n/g, ''));
+        if (base64Candidate) {
             try {
-                return JSON.parse(trimmed);
-            } catch (inner) {
-                console.warn('Firebase service account value is not valid JSON, assuming it is a file path');
-                return rawValue;
+                const decoded = Buffer.from(trimmed, 'base64').toString('utf8');
+                const parsed = JSON.parse(decoded);
+                return parsed;
+            } catch (e) {
+                // Not base64 JSON — fall through to treat as path
             }
         }
+    } catch (e) {
+        // parsing attempt failed; we'll treat as file path below
     }
+
+    // Fallback: assume this is a file path to the service account
     return rawValue;
 }
 
@@ -79,28 +94,62 @@ try {
 
     const parsedConfig = parseFirebaseConfigJson(firebaseConfigJson);
     if (parsedConfig) {
+        console.log('Initializing Firebase using FIREBASE_CONFIG_JSON');
         admin.initializeApp({
             credential: admin.credential.cert(parsedConfig),
             projectId: firebaseProjectId || parsedConfig.project_id
         });
     } else if (envServiceAccount) {
+        console.log('Initializing Firebase using explicit env service account values');
         admin.initializeApp({
             credential: admin.credential.cert(envServiceAccount),
             projectId: firebaseProjectId
         });
     } else if (firebaseServiceAccountPath) {
+        // The service account value may be a JSON string, a base64-encoded JSON string, or a file path.
         const parsedServiceAccount = parseFirebaseServiceAccount(firebaseServiceAccountPath);
-        admin.initializeApp({
-            credential: admin.credential.cert(parsedServiceAccount),
-            projectId: firebaseProjectId
-        });
+        if (typeof parsedServiceAccount === 'string') {
+            // treat as file path if exists
+            if (fs.existsSync(parsedServiceAccount)) {
+                try {
+                    const fileContents = fs.readFileSync(parsedServiceAccount, 'utf8');
+                    const json = JSON.parse(fileContents);
+                    // Ensure private_key formatting
+                    if (json && json.private_key) json.private_key = formatFirebasePrivateKey(json.private_key);
+                    console.log('Initializing Firebase using service account file from path');
+                    admin.initializeApp({ credential: admin.credential.cert(json), projectId: firebaseProjectId });
+                } catch (e) {
+                    console.error('Failed to read or parse Firebase service account file:', e.stack || e.message || e);
+                    throw e;
+                }
+            } else {
+                // If it is a path-like string but does not exist, pass through to admin which may attempt to read it.
+                console.log('Initializing Firebase using service account path (file not found locally):', parsedServiceAccount);
+                admin.initializeApp({ credential: admin.credential.cert(parsedServiceAccount), projectId: firebaseProjectId });
+            }
+        } else {
+            // If parsedServiceAccount is a JSON object, ensure private_key formatting before initializing
+            if (parsedServiceAccount && parsedServiceAccount.private_key) {
+                parsedServiceAccount.private_key = formatFirebasePrivateKey(parsedServiceAccount.private_key);
+            }
+            console.log('Initializing Firebase using parsed service account JSON from env');
+            admin.initializeApp({ credential: admin.credential.cert(parsedServiceAccount), projectId: firebaseProjectId });
+        }
     } else if (firebaseProjectId && !firebaseServiceAccountPath) {
         console.warn('⚠️ FIREBASE_PROJECT_ID is set but no service account credentials are configured. Skipping Firebase initialization to avoid default credential fallback.');
     } else {
         console.warn('⚠️ No Firebase configuration found. Set FIREBASE_CONFIG_JSON, FIREBASE_SERVICE_ACCOUNT_PATH, or explicit Firebase env vars (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY).');
     }
 } catch (err) {
-    console.error('Firebase Admin initialization failed:', err.message);
+    const message = err && err.stack ? err.stack : (err && err.message) ? err.message : String(err);
+    console.error('Firebase Admin initialization failed:', message);
+    // Detect common OpenSSL decoder error and provide actionable hint
+    if (message && message.includes('DECODER')) {
+        console.error('Detected OpenSSL DECODER error when initializing Firebase. Likely causes:');
+        console.error('- The private_key value is encrypted or in an unsupported format. Use an unencrypted PEM private key.');
+        console.error('- Newlines in the private key should be encoded as "\\n" in environment variables; this code will convert them automatically, but double-check the value.');
+        console.error('- If using a file path, ensure the file is valid JSON and accessible to the process.');
+    }
 }
 
 const firebaseInitialized = !!admin.apps.length;
