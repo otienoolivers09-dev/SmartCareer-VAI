@@ -219,7 +219,7 @@ function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || 'https://smart-career-vai.vercel.app,https://smartcareer-vai.onrender.com,https://smartcareervai.com,https://api.smartcareervai.com,https://*.vercel.app';
+const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || 'https://smart-career-vai.vercel.app,https://smartcareer-vai.onrender.com,https://www.smartcareervai.com,https://smartcareervai.com,https://api.smartcareervai.com,https://*.vercel.app';
 const allowedOrigins = rawAllowedOrigins
     .split(',')
     .map(origin => origin.trim())
@@ -233,9 +233,8 @@ const defaultLocalOrigins = [
 const requiredOrigins = [
     ...defaultLocalOrigins,
     'https://smart-career-vai.vercel.app',
-    'https://smart-career-hy1c3606q-olivers-otieno-s-projects.vercel.app',
-    'https://smart-career-cqzy59ol1-olivers-otieno-s-projects.vercel.app',
-    'https://smart-career-vai-git-main-olivers-otieno-s-projects.vercel.app',
+    'https://smartcareer-vai.onrender.com',
+    'https://www.smartcareervai.com',
     'https://smartcareervai.com',
     'https://api.smartcareervai.com',
     'https://smartcareervai.onrender.com',

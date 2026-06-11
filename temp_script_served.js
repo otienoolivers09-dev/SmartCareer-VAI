@@ -1715,11 +1715,19 @@ document.addEventListener('DOMContentLoaded', () => {
       showErrorToast('Generate a CV before downloading.');
       return;
     }
+    if (!hasPaid) {
+      showErrorToast('Payment is required to download the full CV. Please complete payment to unlock the download.');
+      return;
+    }
     downloadTextAsPdf('SmartCareerCV.pdf', latestCV);
   });
   if (downloadCoverLetterPdfBtn) downloadCoverLetterPdfBtn.addEventListener('click', () => {
     if (!latestCoverLetter) {
       showErrorToast('Generate a cover letter before downloading.');
+      return;
+    }
+    if (!hasPaid) {
+      showErrorToast('Payment is required to download the full cover letter. Please complete payment to unlock the download.');
       return;
     }
     downloadTextAsPdf('SmartCareerCoverLetter.pdf', latestCoverLetter);

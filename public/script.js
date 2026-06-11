@@ -67,6 +67,14 @@ function showSuccessToast(message, duration = 3000) {
   showToast(message, 'success', duration);
 }
 
+function updateDownloadButtons() {
+  const downloadCvPdfBtn = document.getElementById('downloadCvPdfBtn');
+  if (downloadCvPdfBtn) {
+    downloadCvPdfBtn.disabled = !hasPaid || !latestCV;
+    downloadCvPdfBtn.classList.toggle('disabled', !hasPaid || !latestCV);
+  }
+}
+
 function showErrorToast(message, duration = 3000) {
   showToast(message, 'error', duration);
 }
@@ -589,8 +597,10 @@ async function generateCVFromWizard() {
     if (!response.ok || !result.success) {
       throw new Error(result.message || 'CV generation failed');
     }
-
     latestCV = result.cv || '';
+    latestCvId = result.cvId || latestCvId;
+    hasPaid = Boolean(result.hasPaid);
+    updateDownloadButtons();
     setOutputText(latestCV);
     showFormSuccess('CV generated successfully.');
     showResultsSection();
@@ -700,8 +710,10 @@ async function generateFromUpload() {
     if (!response.ok || !result.success) {
       throw new Error(result.message || 'Improved CV generation failed');
     }
-
     latestCV = result.cv || '';
+    latestCvId = result.cvId || latestCvId;
+    hasPaid = Boolean(result.hasPaid);
+    updateDownloadButtons();
     setOutputText(latestCV);
     showFormSuccess('Improved CV generated successfully.');
     showResultsSection();
@@ -1737,6 +1749,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (downloadCvPdfBtn) downloadCvPdfBtn.addEventListener('click', () => {
     if (!latestCV) {
       showErrorToast('Generate a CV before downloading.');
+      return;
+    }
+    if (!hasPaid) {
+      showErrorToast('Payment is required to download the full CV. Please complete payment to unlock the download.');
       return;
     }
     downloadTextAsPdf('SmartCareerCV.pdf', latestCV);
