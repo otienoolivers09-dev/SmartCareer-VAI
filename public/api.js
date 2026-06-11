@@ -13,6 +13,8 @@ let API_BASE_URL = (() => {
    const backendHosts = [
       'smartcareer-vai.onrender.com',
       'smartcareervai.onrender.com',
+      'www.smartcareervai.com',
+      'smartcareervai.com',
       'api.smartcareervai.com'
    ];
    if (backendHosts.includes(host)) {

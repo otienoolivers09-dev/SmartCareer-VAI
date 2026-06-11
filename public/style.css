@@ -792,12 +792,22 @@ button:disabled {
   border: 1px solid rgba(248, 113, 113, 0.3);
 }
 
-/* ========== FIELD GRID ========== */
+.status-text {
+  display: block;
+  margin-top: 0.75rem;
+  color: #0f172a;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
 
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+.status-text.error {
+  color: #b00020;
+}
+
+.status-text.success {
+  color: #15803d;
+}
+
 }
 
 /* ========== MODAL ========== */

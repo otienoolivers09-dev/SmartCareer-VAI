@@ -1693,7 +1693,146 @@ app.get('/admin/payments', async (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok', environment: process.env.NODE_ENV || 'development' });
+    res.json({
+        status: 'ok',
+        environment: process.env.NODE_ENV || 'development',
+        timestamp: new Date().toISOString(),
+        uptime_seconds: process.uptime(),
+        services: {
+            firebase: firebaseInitialized,
+            openai: isOpenAIConfigured(),
+            paypal: isPayPalConfigured(),
+            mpesa: isMpesaConfigured()
+        }
+    });
+});
+
+app.get('/status', (req, res) => {
+    res.json({
+        status: 'ok',
+        environment: process.env.NODE_ENV || 'development',
+        timestamp: new Date().toISOString(),
+        uptime_seconds: process.uptime()
+    });
+});
+
+function analyzeCvHealthText(rawText) {
+    const text = String(rawText || '').trim();
+    const metrics = {
+        overall: 0,
+        completeness: 0,
+        formatting: 0,
+        keywords: 0
+    };
+    const feedback = [];
+
+    const hasName = /^[A-Z][a-z]+ [A-Z][a-z]+/m.test(text);
+    const hasEmail = /@/.test(text);
+    const hasPhone = /\d{7,}/.test(text);
+    const hasExperience = /experience|worked|employed|role|position/i.test(text);
+    const hasEducation = /education|degree|university|college|school|certificate/i.test(text);
+    const hasSkills = /skills|technical|proficient|expertise/i.test(text);
+
+    const completeness = [hasName, hasEmail, hasPhone, hasExperience, hasEducation, hasSkills].filter(Boolean).length / 6 * 100;
+    metrics.completeness = Math.round(completeness);
+
+    if (completeness < 50) feedback.push({ type: 'critical', text: '❌ Missing key sections: name, email, phone, experience, education or skills.' });
+    else if (completeness < 80) feedback.push({ type: 'warning', text: '⚠️ Some important sections are missing. Complete your profile for a stronger CV.' });
+    else feedback.push({ type: 'good', text: '✓ All major sections are present.' });
+
+    const lines = text.split('\n').length;
+    const avgLineLength = text.length / Math.max(lines, 1);
+    const formatting = (lines > 5 && avgLineLength < 100) ? 80 : (lines > 3 ? 60 : 40);
+    metrics.formatting = Math.min(100, formatting);
+
+    if (formatting < 50) feedback.push({ type: 'warning', text: '⚠️ Formatting needs improvement. Add line breaks and section headings.' });
+    else feedback.push({ type: 'good', text: '✓ Formatting is on the right track.' });
+
+    const keywords = (text.match(/[a-z]+/gi) || []).length;
+    const uniqueKeywords = new Set(text.toLowerCase().match(/[a-z]+/gi) || []).size;
+    const keywordScore = (uniqueKeywords / 100) * 100;
+    metrics.keywords = Math.min(100, Math.round(keywordScore));
+
+    if (metrics.keywords < 30) feedback.push({ type: 'critical', text: '❌ Not enough unique keywords. Add industry-specific terms and achievements.' });
+    else if (metrics.keywords < 60) feedback.push({ type: 'warning', text: '⚠️ Add more varied keywords to improve ATS detection.' });
+    else feedback.push({ type: 'good', text: '✓ Strong keyword variety detected.' });
+
+    metrics.overall = Math.round((metrics.completeness + metrics.formatting + metrics.keywords) / 3);
+
+    return { metrics, feedback };
+}
+
+function analyzeAtsScore(text) {
+    const source = String(text || '').trim();
+    let score = 100;
+    const issues = [];
+    const recommendations = [];
+
+    if (source.length < 200) {
+        score -= 20;
+        issues.push('CV seems too short (less than 200 words).');
+    }
+    if (!/\d{4}/.test(source)) {
+        issues.push('⚠️ No years or dates detected. Dates help provide context.');
+    }
+    if (!/@/.test(source)) {
+        issues.push('⚠️ No email address found. Add contact details.');
+    }
+    if (!/\+\d|\(\d{3}\)\s?|\d{3}[\-\s]\d{3}|07\d{8}/.test(source)) {
+        issues.push('⚠️ No clear phone number found.');
+    }
+
+    const keywordCount = (source.match(/[A-Z][a-z]+/g) || []).length;
+    if (keywordCount < 20) {
+        score -= 15;
+        issues.push('⚠️ Limited keyword variety. Use more role-related terms.');
+    }
+
+    if (source.includes('Experience') || source.includes('Skills')) {
+        recommendations.push('✓ Clear section headers detected.');
+    }
+    if (!/[\t\|]/.test(source.slice(0, 100))) {
+        recommendations.push('✓ Simple formatting detected.');
+    }
+    if (recommendations.length === 0) {
+        recommendations.push('📌 Add specific job keywords and structure with headings.');
+    }
+
+    return {
+        score: Math.max(0, score),
+        issues: issues.length > 0 ? issues : ['✓ No major ATS issues detected.'],
+        recommendations
+    };
+}
+
+app.post('/free/cv-health', apiLimiter, async (req, res) => {
+    try {
+        const { cvText, rawText, text } = req.body || {};
+        const payload = String(cvText || rawText || text || '').trim();
+        if (!payload) {
+            return res.status(400).json({ success: false, message: 'Please provide CV text for analysis.' });
+        }
+        const result = analyzeCvHealthText(payload);
+        return res.json({ success: true, ...result });
+    } catch (error) {
+        console.error('Free CV health endpoint error:', error.message || error);
+        res.status(500).json({ success: false, message: 'Failed to analyze CV health.' });
+    }
+});
+
+app.post('/free/ats-score', apiLimiter, async (req, res) => {
+    try {
+        const { cvText, text } = req.body || {};
+        const payload = String(cvText || text || '').trim();
+        if (!payload) {
+            return res.status(400).json({ success: false, message: 'Please paste your CV text first.' });
+        }
+        const result = analyzeAtsScore(payload);
+        return res.json({ success: true, ...result });
+    } catch (error) {
+        console.error('Free ATS endpoint error:', error.message || error);
+        res.status(500).json({ success: false, message: 'Failed to score CV for ATS.' });
+    }
 });
 
 /* =========================

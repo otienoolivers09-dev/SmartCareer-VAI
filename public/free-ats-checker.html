@@ -200,6 +200,7 @@
             <h3>Paste Your CV Text</h3>
             <textarea id="cvsText" placeholder="Paste your CV text here and click Analyze to get your ATS score..."></textarea>
             <button id="analyzeBtn" class="primary-btn full-width-btn">Analyze My CV (Free)</button>
+            <div id="atsStatus" class="status-text mt-1"></div>
           </div>
 
           <div id="resultsContainer" class="ats-results hidden">
@@ -307,16 +308,37 @@
 
     document.getElementById('analyzeBtn').addEventListener('click', analyzeCV);
 
-    function analyzeCV() {
+    function setAtsStatus(message, isError = false) {
+      const status = document.getElementById('atsStatus');
+      if (!status) return;
+      status.textContent = message;
+      status.className = isError ? 'status-text error mt-1' : 'status-text mt-1';
+    }
+
+    async function analyzeCV() {
       const cvText = document.getElementById('cvsText').value.trim();
       if (!cvText) {
-        alert('Please paste your CV text first');
+        setAtsStatus('Please paste your CV text first.', true);
         return;
       }
 
-      // Simple ATS scoring algorithm
-      const score = calculateATSScore(cvText);
-      displayResults(score, cvText);
+      setAtsStatus('Analyzing ATS score...');
+      try {
+        const response = await fetch('/free/ats-score', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cvText })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || 'ATS analysis failed');
+        }
+        displayResults(data, cvText);
+        setAtsStatus('Analysis complete.');
+      } catch (error) {
+        console.error('ATS analysis error:', error);
+        setAtsStatus(error.message || 'Failed to analyze ATS score.', true);
+      }
     }
 
     function calculateATSScore(text) {

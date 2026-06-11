@@ -226,6 +226,7 @@
             <h3>Paste Your CV Text</h3>
             <textarea id="cvText" placeholder="Paste your CV text here to get instant health score and feedback..."></textarea>
             <button id="checkHealthBtn" class="primary-btn full-width-btn">Check CV Health (Free)</button>
+            <div id="cvHealthStatus" class="status-text mt-1"></div>
           </div>
 
           <div id="healthResults" class="health-results hidden">
@@ -348,15 +349,37 @@
 
     document.getElementById('checkHealthBtn').addEventListener('click', checkHealth);
 
-    function checkHealth() {
+    function setCvHealthStatus(message, isError = false) {
+      const status = document.getElementById('cvHealthStatus');
+      if (!status) return;
+      status.textContent = message;
+      status.className = isError ? 'status-text error mt-1' : 'status-text mt-1';
+    }
+
+    async function checkHealth() {
       const cvText = document.getElementById('cvText').value.trim();
       if (!cvText) {
-        alert('Please paste your CV text first');
+        setCvHealthStatus('Please paste your CV text first.', true);
         return;
       }
 
-      const health = calculateHealth(cvText);
-      displayHealth(health);
+      setCvHealthStatus('Analyzing CV health...');
+      try {
+        const response = await fetch('/free/cv-health', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cvText })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || 'CV health analysis failed');
+        }
+        displayHealth(data);
+        setCvHealthStatus('Analysis complete.');
+      } catch (error) {
+        console.error('CV health error:', error);
+        setCvHealthStatus(error.message || 'Failed to analyze CV health.', true);
+      }
     }
 
     function calculateHealth(text) {

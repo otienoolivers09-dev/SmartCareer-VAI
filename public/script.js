@@ -69,9 +69,18 @@ function showSuccessToast(message, duration = 3000) {
 
 function updateDownloadButtons() {
   const downloadCvPdfBtn = document.getElementById('downloadCvPdfBtn');
+  const downloadCoverLetterPdfBtn = document.getElementById('downloadCoverLetterPdfBtn');
+
   if (downloadCvPdfBtn) {
-    downloadCvPdfBtn.disabled = !hasPaid || !latestCV;
-    downloadCvPdfBtn.classList.toggle('disabled', !hasPaid || !latestCV);
+    const disabled = !hasPaid || !latestCV;
+    downloadCvPdfBtn.disabled = disabled;
+    downloadCvPdfBtn.classList.toggle('disabled', disabled);
+  }
+
+  if (downloadCoverLetterPdfBtn) {
+    const disabled = !hasPaid || !latestCoverLetter;
+    downloadCoverLetterPdfBtn.disabled = disabled;
+    downloadCoverLetterPdfBtn.classList.toggle('disabled', disabled);
   }
 }
 
@@ -157,6 +166,13 @@ function showFormMessage(message, type = 'info') {
   messageBox.textContent = message;
   messageBox.className = `form-message ${type}`;
   messageBox.style.display = message ? 'block' : 'none';
+}
+
+function setStatusMessage(id, message, isError = false) {
+  const statusEl = document.getElementById(id);
+  if (!statusEl) return;
+  statusEl.textContent = message;
+  statusEl.className = isError ? 'status-text error' : 'status-text';
 }
 
 function showFormError(message) {
@@ -1271,7 +1287,7 @@ async function analyzeJobDescription() {
     return;
   }
 
-  showFormMessage('Analyzing job description...');
+  setStatusMessage('jobStatus', 'Analyzing job description...');
   try {
     const resp = await fetch(apiUrl('/analyze-job'), {
       method: 'POST',
@@ -1283,7 +1299,7 @@ async function analyzeJobDescription() {
       throw new Error(data.message || 'Job analysis failed');
     }
 
-    clearFormMessage();
+    setStatusMessage('jobStatus', 'Analysis complete.');
     if (data.parsed) {
       const p = data.parsed;
       resultPanel.classList.remove('hidden');
@@ -1608,7 +1624,7 @@ async function payWithMpesa() {
     return;
   }
   
-  showPaymentStatus('Initiating M-Pesa payment...');
+  showPaymentStatus('Sending M-Pesa prompt. Waiting for payment confirmation...');
   
   try {
     const response = await fetchWithAuth('/api/payment/mpesa', {
@@ -1619,19 +1635,22 @@ async function payWithMpesa() {
         description: 'Smart Career VAI Services'
       })
     });
-    
-    if (response.ok) {
-      showPaymentStatus('M-Pesa prompt sent to your phone', 'success');
-      showSuccessToast('Check your phone for M-Pesa prompt');
+    const result = await response.json().catch(() => ({}));
+
+    if (response.ok && result.success !== false) {
       hasPaid = true;
+      updateDownloadButtons();
+      showPaymentStatus('Payment confirmed. Your CV and cover letter are now unlocked.', 'success');
+      showSuccessToast('Payment confirmed. Premium downloads unlocked.');
     } else {
-      showPaymentStatus('Payment initiation failed', 'error');
-      showErrorToast('Unable to initiate payment');
+      const errorMsg = result.message || result.error || 'Unable to initiate payment';
+      showPaymentStatus(`Payment initiation failed: ${errorMsg}`, 'error');
+      showErrorToast(errorMsg);
     }
   } catch (error) {
     console.error('Payment error:', error);
     showPaymentStatus('Payment error occurred', 'error');
-    showErrorToast('Payment failed');
+    showErrorToast('Payment failed. Please try again.');
   }
 }
 
@@ -1755,14 +1774,22 @@ document.addEventListener('DOMContentLoaded', () => {
       showErrorToast('Payment is required to download the full CV. Please complete payment to unlock the download.');
       return;
     }
+    showFormMessage('Downloading CV...');
     downloadTextAsPdf('SmartCareerCV.pdf', latestCV);
+    showSuccessToast('CV download started.');
   });
   if (downloadCoverLetterPdfBtn) downloadCoverLetterPdfBtn.addEventListener('click', () => {
     if (!latestCoverLetter) {
       showErrorToast('Generate a cover letter before downloading.');
       return;
     }
+    if (!hasPaid) {
+      showErrorToast('Payment is required to download the cover letter. Please complete payment first.');
+      return;
+    }
+    showFormMessage('Downloading cover letter...');
     downloadTextAsPdf('SmartCareerCoverLetter.pdf', latestCoverLetter);
+    showSuccessToast('Cover letter download started.');
   });
   if (generateSummaryBtn) generateSummaryBtn.addEventListener('click', handleGenerateSummary);
   if (generateCoverLetterBtn) generateCoverLetterBtn.addEventListener('click', handleGenerateCoverLetter);
