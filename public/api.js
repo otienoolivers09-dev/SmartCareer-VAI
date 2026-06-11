@@ -11,13 +11,14 @@ let API_BASE_URL = (() => {
       return 'http://127.0.0.1:3000';
    }
    const backendHosts = [
+      'smartcareer-vai.onrender.com',
       'smartcareervai.onrender.com',
       'api.smartcareervai.com'
    ];
    if (backendHosts.includes(host)) {
       return window.location.origin;
    }
-   return 'https://api.smartcareervai.com';
+   return 'https://smartcareer-vai.onrender.com';
 })();
 
 function isLocalHost() {
