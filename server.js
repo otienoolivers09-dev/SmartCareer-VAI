@@ -129,7 +129,7 @@ app.use((req, res, next) => {
     const nonce = res.locals.nonce;
     res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://www.paypal.com https://www.paypalobjects.com https://sb.paypal.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; connect-src 'self' https://api.smartcareervai.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://www.googleapis.com https://api-m.paypal.com https://api-m.sandbox.paypal.com https://www.paypal.com https://www.paypalobjects.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://images.unsplash.com https://www.paypalobjects.com https://www.paypal.com https://www.sandbox.paypal.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        "default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://www.paypal.com https://www.paypalobjects.com https://sb.paypal.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; connect-src 'self' https://www.gstatic.com https://api.smartcareervai.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://www.googleapis.com https://api-m.paypal.com https://api-m.sandbox.paypal.com https://www.paypal.com https://www.paypalobjects.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://images.unsplash.com https://www.paypalobjects.com https://www.paypal.com https://www.sandbox.paypal.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     );
     next();
 });
@@ -611,6 +611,11 @@ app.post("/generate-cv", apiLimiter, verifyFirebaseToken, async (req, res) => {
             max_tokens: 2000
         });
 
+        if (!completion || !completion.choices || !completion.choices[0] || !completion.choices[0].message || !completion.choices[0].message.content) {
+            console.error('OpenAI returned unexpected response for /generate-cv:', JSON.stringify(completion));
+            throw new Error('OpenAI returned no content');
+        }
+
         const fullCv = completion.choices[0].message.content || "";
         const cvId = `cv_${Date.now()}`;
 
@@ -635,7 +640,9 @@ app.post("/generate-cv", apiLimiter, verifyFirebaseToken, async (req, res) => {
         return res.json({ success: true, cv: truncated, hasPaid: false, cvId, totalWords: words.length });
 
     } catch (error) {
-        console.error("CV Generation Error:", error.message);
+        // Log full error with stack and any response payload for easier debugging (avoid leaking secrets)
+        console.error("CV Generation Error:", error.stack || error.message, error.response?.data || error);
+        // Return a clearer message to the frontend while keeping details out of the response body
         res.status(500).json({ success: false, message: "CV generation failed" });
     }
 });
