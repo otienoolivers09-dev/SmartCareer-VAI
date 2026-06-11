@@ -23,20 +23,50 @@ const isProduction = process.env.NODE_ENV === 'production';
 const firebaseConfigJson = process.env.FIREBASE_CONFIG_JSON;
 const firebaseServiceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || process.env.GOOGLE_APPLICATION_CREDENTIALS;
 const firebaseProjectId = process.env.FIREBASE_PROJECT_ID;
+const firebaseClientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+const firebasePrivateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+function formatFirebasePrivateKey(key) {
+    if (!key) return key;
+    return key.includes('\\n') ? key.replace(/\\n/g, '\n') : key;
+}
+
+function parseFirebaseConfigJson(rawValue) {
+    if (!rawValue) return null;
+
+    let parsed = null;
+    try {
+        parsed = JSON.parse(Buffer.from(rawValue, 'base64').toString('utf8'));
+    } catch (e) {
+        try {
+            parsed = JSON.parse(rawValue);
+        } catch (innerErr) {
+            console.error('Failed to parse FIREBASE_CONFIG_JSON:', innerErr.message);
+            parsed = null;
+        }
+    }
+    return parsed;
+}
 
 try {
-    if (firebaseConfigJson) {
-        let config;
-        try {
-            // Try parsing as base64 first (for backwards compatibility)
-            config = JSON.parse(Buffer.from(firebaseConfigJson, 'base64').toString('utf8'));
-        } catch (e) {
-            // If base64 fails, try parsing as direct JSON
-            config = JSON.parse(firebaseConfigJson);
+    const envServiceAccount = (firebaseProjectId && firebaseClientEmail && firebasePrivateKey)
+        ? {
+            projectId: firebaseProjectId,
+            clientEmail: firebaseClientEmail,
+            privateKey: formatFirebasePrivateKey(firebasePrivateKey)
         }
+        : null;
+
+    const parsedConfig = parseFirebaseConfigJson(firebaseConfigJson);
+    if (parsedConfig) {
         admin.initializeApp({
-            credential: admin.credential.cert(config),
-            projectId: firebaseProjectId || config.project_id
+            credential: admin.credential.cert(parsedConfig),
+            projectId: firebaseProjectId || parsedConfig.project_id
+        });
+    } else if (envServiceAccount) {
+        admin.initializeApp({
+            credential: admin.credential.cert(envServiceAccount),
+            projectId: firebaseProjectId
         });
     } else if (firebaseServiceAccountPath) {
         admin.initializeApp({
@@ -46,7 +76,7 @@ try {
     } else if (firebaseProjectId) {
         console.warn('⚠️ FIREBASE_PROJECT_ID is set but no service account credentials are configured. Skipping Firebase initialization to avoid default credential fallback.');
     } else {
-        console.warn('⚠️ Firebase Admin SDK not configured. Set FIREBASE_CONFIG_JSON, FIREBASE_SERVICE_ACCOUNT_PATH, or GOOGLE_APPLICATION_CREDENTIALS in .env');
+        console.warn('⚠️ No Firebase configuration found. Set FIREBASE_CONFIG_JSON, FIREBASE_SERVICE_ACCOUNT_PATH, or explicit Firebase env vars (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY).');
     }
 } catch (err) {
     console.error('Firebase Admin initialization failed:', err.message);
@@ -73,19 +103,10 @@ app.use(helmet({
 
 app.use((req, res, next) => {
     const nonce = res.locals.nonce;
-    res.setHeader('Content-Security-Policy', [
-        "default-src 'self'",
-        `script-src 'self' 'unsafe-inline' https://www.paypal.com https://www.paypalobjects.com https://sb.paypal.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net`,
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "img-src 'self' data: https://images.unsplash.com https://www.paypalobjects.com https://www.paypal.com https://www.sandbox.paypal.com",
-        "connect-src 'self' https://smartcareervai.onrender.com https://api.smartcareervai.com https://smart-career-vai.vercel.app https://smart-career-vai-git-main-olivers-otieno-s-projects.vercel.app https://vercel.com https://smartcareervai.com https://api-m.sandbox.paypal.com https://api-m.paypal.com https://www.sandbox.paypal.com https://www.paypal.com https://www.paypalobjects.com https://sandbox.safaricom.co.ke https://api.safaricom.co.ke https://www.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
-        "font-src 'self' https://fonts.gstatic.com",
-        "object-src 'none'",
-        "frame-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com",
-        "base-uri 'self'",
-        "form-action 'self'",
-        "frame-ancestors 'none'"
-    ].join('; '));
+    res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://www.paypal.com https://www.paypalobjects.com https://sb.paypal.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob:;"
+    );
     next();
 });
 
@@ -125,7 +146,7 @@ function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || 'https://smart-career-vai.vercel.app,https://smart-career-cqzy59ol1-olivers-otieno-s-projects.vercel.app,https://smartcareervai.com,https://api.smartcareervai.com,https://smartcareervai.onrender.com';
+const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || 'https://smart-career-vai.vercel.app,https://smart-career-cqzy59ol1-olivers-otieno-s-projects.vercel.app,https://smart-career-vai-git-main-olivers-otieno-s-projects.vercel.app,https://smartcareervai.com,https://api.smartcareervai.com,https://smartcareervai.onrender.com';
 const allowedOrigins = rawAllowedOrigins
     .split(',')
     .map(origin => origin.trim())
@@ -140,6 +161,7 @@ const requiredOrigins = [
     ...defaultLocalOrigins,
     'https://smart-career-vai.vercel.app',
     'https://smart-career-cqzy59ol1-olivers-otieno-s-projects.vercel.app',
+    'https://smart-career-vai-git-main-olivers-otieno-s-projects.vercel.app',
     'https://smartcareervai.com',
     'https://api.smartcareervai.com',
     'https://smartcareervai.onrender.com'
@@ -487,6 +509,58 @@ app.post("/extract-info", apiLimiter, verifyFirebaseToken, async (req, res) => {
     } catch (error) {
         console.error("Extraction Error:", error.message);
         res.status(500).json({ success: false, message: "Extraction failed" });
+    }
+});
+
+// Job description analyzer - public trial endpoint (no auth required)
+app.post('/analyze-job', apiLimiter, async (req, res) => {
+    if (!isOpenAIConfigured()) {
+        return res.status(503).json({ success: false, message: 'OpenAI API key is not configured' });
+    }
+    try {
+        const jobText = (req.body && (req.body.jobText || req.body.text || req.body.jobDescription)) || '';
+        if (!jobText || String(jobText).trim().length < 20) {
+            return res.status(400).json({ success: false, message: 'Please provide a job advert or description (at least 20 characters).' });
+        }
+
+        const systemPrompt = `You are an expert career advisor and ATS specialist. Analyze the supplied job advert and produce ONLY valid JSON with the following keys: matchScore (number 0-100), strengths (array of short strings), weaknesses (array of short strings), chanceOfInterview (one of Low, Medium, High), suggestedImprovements (array of short actionable suggestions). Keep responses concise and focused.`;
+
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: jobText }
+            ],
+            max_tokens: 800
+        });
+
+        const raw = completion.choices?.[0]?.message?.content || '';
+        let parsed = null;
+        try {
+            parsed = JSON.parse(raw);
+        } catch (e) {
+            const jsonMatch = raw.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                try { parsed = JSON.parse(jsonMatch[0]); } catch (e2) { parsed = null; }
+            }
+        }
+
+        if (!parsed) {
+            return res.json({ success: true, parsed: null, raw: raw, message: 'Model returned non-JSON output; see raw text.' });
+        }
+
+        const result = {
+            matchScore: Number(parsed.matchScore ?? parsed.score ?? 0),
+            strengths: Array.isArray(parsed.strengths) ? parsed.strengths : (parsed.positives || []),
+            weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : (parsed.negatives || []),
+            chanceOfInterview: parsed.chanceOfInterview || parsed.chance || 'Medium',
+            suggestedImprovements: Array.isArray(parsed.suggestedImprovements) ? parsed.suggestedImprovements : (parsed.suggestions || [])
+        };
+
+        res.json({ success: true, parsed: result });
+    } catch (error) {
+        console.error('Job analysis error:', error.message || error);
+        res.status(500).json({ success: false, message: 'Job analysis failed' });
     }
 });
 

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Smart Career VAI - Upload your CV and get professional rewrite, ATS score, cover letter, LinkedIn optimization, interview questions, and career roadmap.">
+  <meta name="keywords" content="CV generator, ATS score, cover letter, career tools, AI resume">
+  <title>Smart Career VAI - Transform Your Career</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 600px;
+      width: 100%;
+      background: white;
+      border-radius: 1rem;
+      padding: 3rem 2rem;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    .brand {
+      margin-bottom: 2rem;
+    }
+
+    .brand-name {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .brand-name .highlight {
+      color: #3b82f6;
+    }
+
+    .headline {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+
+    .subheading {
+      font-size: 1.1rem;
+      color: #64748b;
+      margin-bottom: 2.5rem;
+      line-height: 1.6;
+    }
+
+    .benefits {
+      background: #f8fafc;
+      border-radius: 0.75rem;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      text-align: left;
+    }
+
+    .benefits-title {
+      font-weight: 600;
+      color: #0f172a;
+      margin-bottom: 1.25rem;
+      font-size: 1.1rem;
+    }
+
+    .benefit-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 0;
+      font-size: 1rem;
+      color: #334155;
+    }
+
+    .benefit-icon {
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+
+    .benefit-text {
+      flex: 1;
+    }
+
+    .cta-button {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: white;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+    }
+
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+    }
+
+    .cta-button:active {
+      transform: translateY(0);
+    }
+
+    .secondary-actions {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .secondary-text {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      margin-bottom: 1rem;
+    }
+
+    .secondary-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .secondary-button {
+      padding: 0.75rem;
+      font-size: 0.9rem;
+      color: #3b82f6;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .secondary-button:hover {
+      background: #dbeafe;
+      border-color: #7dd3fc;
+    }
+
+    .trust-section {
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid #e2e8f0;
+      font-size: 0.9rem;
+      color: #64748b;
+    }
+
+    .trust-item {
+      display: inline-block;
+      margin: 0 0.75rem;
+      padding: 0.5rem 0;
+    }
+
+    .trust-item strong {
+      color: #0f172a;
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 2rem 1.5rem;
+      }
+
+      .headline {
+        font-size: 1.5rem;
+      }
+
+      .brand-name {
+        font-size: 1.5rem;
+      }
+
+      .benefits {
+        padding: 1.5rem;
+      }
+
+      .secondary-buttons {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .loader {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .cta-button.loading {
+      opacity: 0.8;
+      cursor: not-allowed;
+    }
+
+    .cta-button.loading .loader {
+      display: inline-block;
+    }
+
+    .cta-button.loading span {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Brand -->
+    <div class="brand">
+      <div class="brand-name">Smart Career <span class="highlight">VAI</span></div>
+    </div>
+
+    <!-- Headline -->
+    <h1 class="headline">Transform Your Career with AI</h1>
+
+    <!-- Subheading -->
+    <p class="subheading">Upload your CV and get everything you need to land your dream job</p>
+
+    <!-- Benefits -->
+    <div class="benefits">
+      <div class="benefits-title">What you'll get:</div>
+      <div class="benefit-item">
+        <span class="benefit-icon">✨</span>
+        <span class="benefit-text">Professional CV Rewrite</span>
+      </div>
+      <div class="benefit-item">
+        <span class="benefit-icon">📊</span>
+        <span class="benefit-text">ATS Score & Optimization</span>
+      </div>
+      <div class="benefit-item">
+        <span class="benefit-icon">📝</span>
+        <span class="benefit-text">Cover Letter</span>
+      </div>
+      <div class="benefit-item">
+        <span class="benefit-icon">💼</span>
+        <span class="benefit-text">LinkedIn Optimization</span>
+      </div>
+      <div class="benefit-item">
+        <span class="benefit-icon">🎤</span>
+        <span class="benefit-text">Interview Questions</span>
+      </div>
+      <div class="benefit-item">
+        <span class="benefit-icon">🚀</span>
+        <span class="benefit-text">Career Roadmap</span>
+      </div>
+    </div>
+
+    <!-- Main CTA -->
+    <button class="cta-button" id="mainCta" onclick="startUpload()">
+      <span>📤 UPLOAD CV</span>
+      <div class="loader"></div>
+    </button>
+
+    <!-- Secondary Actions -->
+    <div class="secondary-actions">
+      <div class="secondary-text">Not ready? Try free tools first:</div>
+      <div class="secondary-buttons">
+        <a href="free-ats-checker.html" class="secondary-button">🔍 ATS Checker</a>
+        <a href="free-cv-checker.html" class="secondary-button">💯 CV Health</a>
+      </div>
+    </div>
+
+    <!-- Trust Section -->
+    <div class="trust-section">
+      <div class="trust-item">
+        <strong>10K+</strong> CVs Generated
+      </div>
+      <div class="trust-item">
+        <strong>4.8★</strong> Rating
+      </div>
+      <div class="trust-item">
+        <strong>100%</strong> Satisfaction
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function startUpload() {
+      const button = document.getElementById('mainCta');
+      
+      // Show loading state
+      button.classList.add('loading');
+      
+      // Redirect after showing loading
+      setTimeout(() => {
+        window.location.href = '/index.html#uploadSection';
+      }, 500);
+    }
+
+    // Alternative: Direct file upload handler
+    function handleQuickUpload() {
+      window.location.href = '/index.html?action=upload';
+    }
+  </script>
+</body>
+</html>
