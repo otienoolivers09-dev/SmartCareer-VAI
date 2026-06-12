@@ -10,11 +10,19 @@ let API_BASE_URL = (() => {
    if (isLocal && window.__TRY_LOCAL_API) {
       return 'http://127.0.0.1:3000';
    }
+
+   // Map static frontend hosts to the API backend when the API is served on a separate host.
+   const apiHostMap = {
+      'www.smartcareervai.com': 'https://api.smartcareervai.com',
+      'smartcareervai.com': 'https://api.smartcareervai.com'
+   };
+   if (apiHostMap[host]) {
+      return apiHostMap[host];
+   }
+
    const backendHosts = [
       'smartcareer-vai.onrender.com',
       'smartcareervai.onrender.com',
-      'www.smartcareervai.com',
-      'smartcareervai.com',
       'api.smartcareervai.com'
    ];
    if (backendHosts.includes(host)) {
