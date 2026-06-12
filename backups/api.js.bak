@@ -148,72 +148,55 @@ export function downloadTextAsPdf(filename, text) {
    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
    const pageWidth = doc.internal.pageSize.getWidth();
    const pageHeight = doc.internal.pageSize.getHeight();
-   const margin = 50; // Give the document a professional white margin
+   const margin = 40; // 40pt margins
 
+   // Use a PDF-safe fallback: Helvetica approximates Arial. Calibri isn't a standard PDF font,
+   // so prefer Helvetica (Arial-like) for widest compatibility.
    const baseFont = 'Helvetica';
-   const baseFontSize = 11; // 11pt body text
-   const headingFontSize = 13;
-   const lineHeight = Math.round(baseFontSize * 1.5); // generous line-height
+   const baseFontSize = 11; // 11pt
+   const lineHeight = Math.round(baseFontSize * 1.4); // 1.4 line-height
    const usableWidth = pageWidth - margin * 2;
 
    doc.setFont(baseFont);
    doc.setFontSize(baseFontSize);
-   doc.setTextColor('#111111');
 
    // Split input into paragraphs to preserve spacing and detect headings
-   const paragraphs = String(text || '').replace(/\r/g, '').split(/\n{2,}/g);
+   const paragraphs = String(text || '').split(/\n{2,}/g);
    let y = margin;
 
-   function addPageIfNeeded(additionalHeight = 0) {
-      if (y + additionalHeight > pageHeight - margin) {
-         doc.addPage();
-         y = margin;
-         doc.setFont(baseFont);
-         doc.setFontSize(baseFontSize);
-      }
-   }
+   paragraphs.forEach((para, pi) => {
+      const rawLines = doc.splitTextToSize(para.replace(/\r/g, ''), usableWidth);
 
-   paragraphs.forEach((para) => {
-      const lines = doc.splitTextToSize(para.trim(), usableWidth);
-      const firstLine = lines[0] || '';
-      const isHeader = /^([A-Z][A-Za-z' ]{2,}|[A-Z\s]+)$/.test(firstLine.trim()) && firstLine.trim().length <= 35;
+      rawLines.forEach((line, idx) => {
+         // Detect likely section headers: short lines (<=4 words), Title Case or ALL CAPS
+         const trimmed = String(line || '').trim();
+         const words = trimmed.split(/\s+/).filter(Boolean);
+         const isAllCaps = trimmed && trimmed === trimmed.toUpperCase() && /[A-Z]/.test(trimmed);
+         const isShortTitle = words.length > 0 && words.length <= 4 && /^[A-Z][a-z0-9]/.test(words[0]);
 
-      if (isHeader) {
-         addPageIfNeeded(lineHeight * 1.5);
-         doc.setFont(baseFont, 'bold');
-         doc.setFontSize(headingFontSize);
-         doc.text(firstLine.trim(), margin, y);
-         y += lineHeight;
-         doc.setFont(baseFont);
-         doc.setFontSize(baseFontSize);
-         if (lines.length > 1) {
-            const subLines = lines.slice(1);
-            addPageIfNeeded(subLines.length * lineHeight);
-            subLines.forEach((line) => {
-               doc.text(line, margin, y);
-               y += lineHeight;
-            });
+         if (y > pageHeight - margin) {
+            doc.addPage();
+            y = margin;
+            doc.setFont(baseFont);
+            doc.setFontSize(baseFontSize);
          }
-      } else {
-         addPageIfNeeded(lines.length * lineHeight);
-         lines.forEach((line) => {
-            const trimmed = line.trim();
-            if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
-               const bullet = trimmed.startsWith('- ') ? '•' : '•';
-               const bulletText = trimmed.replace(/^[-•]\s*/, '');
-               const bulletLines = doc.splitTextToSize(bulletText, usableWidth - 15);
-               doc.text(bullet, margin, y);
-               bulletLines.forEach((subLine, index) => {
-                  const x = margin + 15;
-                  doc.text(subLine, x, y);
-                  y += lineHeight;
-               });
-            } else {
-               doc.text(trimmed, margin, y);
-               y += lineHeight;
-            }
-         });
-      }
+
+         if (isAllCaps || isShortTitle) {
+            // Render as section header
+            doc.setFont(baseFont, 'bold');
+            doc.setFontSize(Math.round(baseFontSize * 1.1));
+            doc.text(trimmed, margin, y);
+            y += lineHeight + 4; // small extra gap after header
+            // restore base font for following lines
+            doc.setFont(baseFont);
+            doc.setFontSize(baseFontSize);
+         } else {
+            doc.text(line, margin, y);
+            y += lineHeight;
+         }
+      });
+
+      // Add paragraph gap
       y += Math.round(lineHeight / 2);
    });
 

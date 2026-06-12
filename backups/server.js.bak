@@ -664,104 +664,21 @@ app.post("/generate-cv", apiLimiter, verifyFirebaseToken, async (req, res) => {
         }
 
         const cvType = (value.cvType || value.plan || 'standard').toString().toLowerCase();
-        const systemPrompt = cvType === 'international'
-            ? `You are a Certified International Resume Writer and Career Coach with expertise in ATS optimization.
-Create a world-class professional CV that meets hiring standards in the USA, UK, Canada, Australia, Europe, and international remote workplaces.
-
-Requirements:
-- Produce a highly professional, ATS-friendly CV.
-- Use clear and modern business language.
-- Create a powerful Professional Summary tailored to the candidate's background.
-- Rewrite all work experience into achievement-oriented bullet points.
-- Begin each bullet point with strong action verbs.
-- Quantify achievements wherever possible using numbers, percentages, revenue, productivity improvements, customer satisfaction metrics, project outcomes, or measurable results.
-- Include relevant industry keywords for ATS systems.
-- Eliminate weak phrases such as: Responsible for, Duties included, Worked on, Assisted with.
-- Use concise and impactful wording.
-- Ensure consistency in formatting and writing style.
-
-Structure:
-FULL NAME
-
-CONTACT INFORMATION
-Phone | Email | LinkedIn | Location
-
-PROFESSIONAL SUMMARY
-
-CORE COMPETENCIES
-
-PROFESSIONAL EXPERIENCE
-
-EDUCATION
-
-CERTIFICATIONS
-
-TECHNICAL SKILLS
-
-PROJECTS (if applicable)
-
-LANGUAGES (if applicable)
-
-REFERENCES AVAILABLE UPON REQUEST
-
-Formatting Rules:
-- No tables
-- No graphics
-- No emojis
-- No decorative symbols
-- No photos
-- No excessive personal details
-- ATS compliant
-- Professional international standards
-
-Output only the final CV.`
-            : `You are an experienced Professional CV Writer.
-Create a clean, professional, and well-structured CV suitable for general employment applications.
-
-Requirements:
-- Use clear and professional language.
-- Create a concise Professional Summary.
-- Present work experience using bullet points.
-- Highlight key achievements and responsibilities.
-- Include relevant skills and qualifications.
-- Ensure the CV is easy to read and professionally organized.
-
-Structure:
-FULL NAME
-
-CONTACT INFORMATION
-
-CAREER PROFILE
-
-WORK EXPERIENCE
-
-EDUCATION
-
-PROFESSIONAL SKILLS
-
-CERTIFICATIONS (if applicable)
-
-REFERENCES
-
-Formatting Rules:
-- Simple professional layout
-- Easy to read
-- Consistent formatting
-- No unnecessary graphics
-- Suitable for most employers
-
-Output only the final CV.`;
+        const planInstructions = getCvTypeInstructions(cvType);
 
         const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             messages: [
-                { role: "system", content: systemPrompt },
+                {
+                    role: "system",
+                    content: `You are an expert international CV writer and ATS specialist. Generate a professional CV with the exact structure: Full Name, Contact Information, Professional Summary, Core Competencies, Professional Experience, Education, Certifications, Projects (if applicable), Skills, References (optional). Use achievement-focused bullet points with strong action verbs, remove weak phrases like 'Responsible for', 'Duties included', and 'Worked on'. Ensure ATS-friendly formatting: no tables, no emojis, no graphics, clean spacing, standard headings, and professional typography. Keep the output as plain text only, with clear page layout suitable for PDF conversion.`
+                },
                 {
                     role: "user",
                     content: `Applicant details:\n${JSON.stringify(value, null, 2)}\n\nCreate a single polished CV using the structure above and tailor it for ${cvType === 'international' ? 'international' : 'standard'} job applications. Only return a plain text resume without markdown, JSON, HTML tags, or code fences.`
                 }
             ],
-            max_tokens: 2500
+            max_tokens: 2000
         });
 
         if (!completion || !completion.choices || !completion.choices[0] || !completion.choices[0].message || !completion.choices[0].message.content) {
@@ -786,6 +703,7 @@ Output only the final CV.`;
 
         // Persist the generated CV server-side (so full content can be unlocked after payment)
         try {
+            // Persist only metadata and length to avoid storing huge content accidentally in logs
             await payments.createCV({ cv_id: cvId, user_id: req.userId, content: fullCv });
             console.log('Persisted CV metadata', { cvId, userId: req.userId, contentLength: fullCv.length });
         } catch (e) {
@@ -800,8 +718,9 @@ Output only the final CV.`;
             return res.json({ success: true, cv: fullCv, hasPaid: true, cvId });
         }
 
+        // Otherwise, return only the first 600 words as a preview (must pay to unlock full CV)
         const words = fullCv.split(/\s+/).filter(Boolean);
-        const truncated = words.slice(0, 700).join(' ');
+        const truncated = words.slice(0, 600).join(' ');
         return res.json({ success: true, cv: truncated, hasPaid: false, cvId, totalWords: words.length });
 
     } catch (error) {

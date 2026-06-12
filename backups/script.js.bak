@@ -602,7 +602,7 @@ async function generateCVFromWizard() {
     return;
   }
 
-  showFormMessage('Generating CV...');
+  showFormMessage('Generating CV from your answers...');
   try {
     const response = await fetchWithAuth('/generate-cv', {
       method: 'POST',
@@ -618,12 +618,8 @@ async function generateCVFromWizard() {
     hasPaid = Boolean(result.hasPaid);
     updateDownloadButtons();
     setOutputText(latestCV);
-    saveDraft();
     showFormSuccess('CV generated successfully.');
     showResultsSection();
-    if (!hasPaid) {
-      showFormMessage('Your CV is partially shown. Pay to unlock the full version.');
-    }
   } catch (error) {
     console.error('Wizard CV generation error:', error);
     showFormError(error.message || 'Unable to generate CV from wizard.');
@@ -719,7 +715,7 @@ async function generateFromUpload() {
     return;
   }
 
-  showFormMessage('Generating CV...');
+  showFormMessage('Generating improved CV from your uploaded content...');
   try {
     const response = await fetchWithAuth('/generate-cv', {
       method: 'POST',
@@ -735,12 +731,8 @@ async function generateFromUpload() {
     hasPaid = Boolean(result.hasPaid);
     updateDownloadButtons();
     setOutputText(latestCV);
-    saveDraft();
     showFormSuccess('Improved CV generated successfully.');
     showResultsSection();
-    if (!hasPaid) {
-      showFormMessage('Your CV is partially shown. Pay to unlock the full version.');
-    }
   } catch (error) {
     console.error('Upload CV generation error:', error);
     showFormError(error.message || 'Unable to generate improved CV from upload.');
@@ -1631,8 +1623,6 @@ function saveDraft() {
   const draft = {
     cv: latestCV,
     coverLetter: latestCoverLetter,
-    cvPaid: hasPaid,
-    cvId: latestCvId,
     timestamp: new Date().toISOString()
   };
   
@@ -1651,38 +1641,14 @@ function loadDraft() {
   try {
     const draft = localStorage.getItem('smartCareerDraft');
     if (draft) {
-      const { cv, coverLetter, cvPaid, cvId } = JSON.parse(draft);
+      const { cv, coverLetter } = JSON.parse(draft);
       if (cv) latestCV = cv;
       if (coverLetter) latestCoverLetter = coverLetter;
-      if (typeof cvPaid === 'boolean') hasPaid = cvPaid;
-      if (cvId) latestCvId = cvId;
-      if (latestCV || latestCoverLetter) {
-        setOutputText(latestCV || latestCoverLetter);
-        updateDownloadButtons();
-      }
       showSuccessToast('Draft loaded!');
     }
   } catch (err) {
     console.error('Failed to load draft:', err);
   }
-}
-
-async function fetchFullCv() {
-  if (!latestCvId) return null;
-  try {
-    const response = await fetchWithAuth(`/cv/full/${encodeURIComponent(latestCvId)}`);
-    const data = await response.json().catch(() => null);
-    if (response.ok && data && data.success && data.cv) {
-      latestCV = data.cv;
-      saveDraft();
-      updateDownloadButtons();
-      setOutputText(latestCV);
-      return latestCV;
-    }
-  } catch (err) {
-    console.error('Failed to fetch full CV:', err);
-  }
-  return null;
 }
 
 // ========== UTILITY FUNCTIONS ==========
@@ -1732,9 +1698,10 @@ function setupPaymentListeners() {
       const payAmount = document.getElementById('payAmountM');
       if (totalAmount) totalAmount.textContent = total;
       if (payAmount) payAmount.textContent = total;
+      
+      // Enable/disable payment button
       if (payServiceBtn) {
         payServiceBtn.disabled = total === 0;
-        payServiceBtn.textContent = total === 0 ? 'Pay with M-Pesa' : `Pay KES ${total} with M-Pesa`;
       }
     });
   });
@@ -1757,7 +1724,7 @@ async function payWithMpesa() {
     return;
   }
   
-  showPaymentStatus('Initiating payment...');
+  showPaymentStatus('Sending M-Pesa prompt. Waiting for payment confirmation...');
   
   try {
     const response = await fetchWithAuth('/api/payment/mpesa', {
@@ -1778,7 +1745,6 @@ async function payWithMpesa() {
       updateDownloadButtons();
       showPaymentStatus('Payment confirmed. Your CV and cover letter are now unlocked.', 'success');
       showSuccessToast('Payment confirmed. Premium downloads unlocked.');
-      await fetchFullCv();
     } else {
       const errorMsg = result.message || result.error || 'Unable to initiate payment';
       showPaymentStatus(`Payment initiation failed: ${errorMsg}`, 'error');
@@ -1840,7 +1806,6 @@ async function initPayPalButtons() {
         showPaymentStatus('Please select a service before initiating PayPal payment.', true);
         throw new Error('No service selected');
       }
-      showPaymentStatus('Initiating PayPal payment...');
 
       try {
         const response = await fetchWithAuth('/api/paypal/create-order', {
@@ -1894,7 +1859,6 @@ async function initPayPalButtons() {
         updateDownloadButtons();
         showPaymentStatus('PayPal payment successful. Your downloads are unlocked.', 'success');
         showSuccessToast('Payment complete! Your CV and cover letter are now unlocked.');
-        await fetchFullCv();
       } catch (err) {
         console.error('PayPal approval error:', err);
         showPaymentStatus(`PayPal approval failed: ${err.message || 'Please try again.'}`, true);
@@ -2024,10 +1988,10 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (!hasPaid) {
-      showFormError('Payment is required to download the full CV. Please complete payment to unlock the download.');
+      showErrorToast('Payment is required to download the full CV. Please complete payment to unlock the download.');
       return;
     }
-    showFormMessage('Downloading international CV...');
+    showFormMessage('Downloading CV...');
     downloadTextAsPdf('SmartCareerCV.pdf', latestCV);
     showSuccessToast('CV download started.');
   });
@@ -2111,14 +2075,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (rawDraft) {
       const parsed = JSON.parse(rawDraft);
       if (parsed && (parsed.cv || parsed.coverLetter)) {
+        // Prefer showing the CV tab if a CV draft exists
         if (parsed.cv) {
           latestCV = parsed.cv;
           setOutputText(latestCV);
           showResultsSection();
           setActiveResultsTab('cv');
-          if (!parsed.cvPaid) {
-            showFormMessage('Your saved CV is partially shown. Pay to unlock the full version.');
-          }
         } else if (parsed.coverLetter) {
           latestCoverLetter = parsed.coverLetter;
           setOutputText(latestCoverLetter);
