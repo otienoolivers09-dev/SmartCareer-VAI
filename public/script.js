@@ -648,7 +648,7 @@ async function processUploadedCv() {
     assistantResults.healthAnalysis = result.health;
     const healthFeedback = document.getElementById('healthFeedback');
     if (healthFeedback) {
-      healthFeedback.textContent = JSON.stringify(result.health, null, 2);
+      healthFeedback.textContent = formatCvHealthAnalysis(result.health);
     }
 
     showFormSuccess('CV analyzed successfully. Ready to improve.');
@@ -695,7 +695,7 @@ async function handleExtractProfile() {
 
     const output = document.getElementById('packageOutput');
     if (output) {
-      output.textContent = 'Profile extracted successfully:\n' + formatJsonOutput(parsed);
+      output.textContent = 'Profile extracted successfully:\n' + formatModelOutput(parsed);
     }
     showSuccessToast('Profile extracted. Review the auto-filled fields.');
     if (uploadStatus) uploadStatus.textContent = 'Profile extraction complete.';
@@ -934,13 +934,89 @@ function clearOutput() {
   showFormSuccess('Output cleared');
 }
 
-function formatJsonOutput(data) {
-  if (!data) return 'No data available';
+function formatCvHealthAnalysis(data) {
+  if (!data) return 'No CV health data available.';
+
+  if (typeof data === 'string') {
+    return data.trim();
+  }
+
+  const lines = [];
+
+  function appendField(label, value, note) {
+    if (value === undefined || value === null) return;
+    const valueText = typeof value === 'number' ? `${value}%` : value;
+    lines.push(note ? `${label}: ${valueText} — ${note}` : `${label}: ${valueText}`);
+  }
+
   try {
-    return typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    appendField('Overall CV health score', data.overall, undefined);
+    appendField('Summary score', data.summary, 'your profile summary should be clear, achievement-focused, and aligned with the target role.');
+    appendField('Skills score', data.skills, 'ensure your CV lists relevant and measurable skills for the role.');
+    appendField('Experience score', data.experience, 'highlight impactful accomplishments, not just responsibilities.');
+    appendField('Education score', data.education, 'make your qualifications easy to read and linked to your career goals.');
+    appendField('ATS compatibility', data.ats_compatibility || data.atsCompatibility, 'improve keywords, formatting, and section headings to pass automated screening.');
+
+    if (Array.isArray(data.improvements) && data.improvements.length) {
+      lines.push('Key improvements:');
+      data.improvements.forEach((tip, index) => {
+        const cleanTip = typeof tip === 'string' ? tip.trim() : JSON.stringify(tip);
+        lines.push(`${index + 1}. ${cleanTip}`);
+      });
+    }
+
+    if (!lines.length && typeof data === 'object') {
+      Object.entries(data).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          lines.push(`${key.replace(/[_-]/g, ' ')}:`);
+          value.forEach((item, index) => {
+            lines.push(`  ${index + 1}. ${typeof item === 'object' ? JSON.stringify(item) : item}`);
+          });
+        } else if (typeof value === 'object' && value !== null) {
+          lines.push(`${key.replace(/[_-]/g, ' ')}: ${JSON.stringify(value)}`);
+        } else {
+          lines.push(`${key.replace(/[_-]/g, ' ')}: ${value}`);
+        }
+      });
+    }
+
+    return lines.length ? lines.join('\n\n') : 'CV health report returned no details.';
   } catch (err) {
+    console.error('Format CV health error:', err);
     return String(data);
   }
+}
+
+function formatModelOutput(data) {
+  if (!data) return 'No data available.';
+  if (typeof data === 'string') return data.trim();
+
+  if (Array.isArray(data)) {
+    if (data.length === 0) return 'No details returned.';
+    return data.map((item, index) => `• ${typeof item === 'string' ? item : JSON.stringify(item)}`).join('\n');
+  }
+
+  if (typeof data === 'object') {
+    if (data.text) return String(data.text).trim();
+    if (data.result) return String(data.result).trim();
+
+    const lines = [];
+    for (const [key, value] of Object.entries(data)) {
+      if (Array.isArray(value)) {
+        lines.push(`${key.replace(/[_-]/g, ' ')}:`);
+        value.forEach((item, index) => {
+          lines.push(`  ${index + 1}. ${typeof item === 'string' ? item : JSON.stringify(item)}`);
+        });
+      } else if (typeof value === 'object' && value !== null) {
+        lines.push(`${key.replace(/[_-]/g, ' ')}: ${JSON.stringify(value)}`);
+      } else {
+        lines.push(`${key.replace(/[_-]/g, ' ')}: ${value}`);
+      }
+    }
+    return lines.join('\n');
+  }
+
+  return String(data);
 }
 
 function getResultsTextForTab(tab) {
@@ -953,19 +1029,19 @@ function getResultsTextForTab(tab) {
       return assistantResults.interviewTips || 'No interview tips generated yet.';
     case 'health':
       return assistantResults.healthAnalysis
-        ? formatJsonOutput(assistantResults.healthAnalysis)
+        ? formatCvHealthAnalysis(assistantResults.healthAnalysis)
         : 'Run CV analysis to see the health report.';
     case 'skills':
       return assistantResults.missingSkills
-        ? formatJsonOutput(assistantResults.missingSkills)
+        ? formatModelOutput(assistantResults.missingSkills)
         : 'Run skills gap analysis to identify missing skills.';
     case 'salary':
       return assistantResults.salaryEstimate
-        ? formatJsonOutput(assistantResults.salaryEstimate)
+        ? formatModelOutput(assistantResults.salaryEstimate)
         : 'Estimate salary to see expected pay range.';
     case 'recruiter':
       return assistantResults.recruiterView
-        ? formatJsonOutput(assistantResults.recruiterView)
+        ? formatModelOutput(assistantResults.recruiterView)
         : 'Generate recruiter feedback for your CV.';
     default:
       return 'Select a section to view the output.';
@@ -1181,7 +1257,10 @@ async function handleAnalyzeHealth() {
       throw new Error(result.message || 'CV analysis failed');
     }
     assistantResults.healthAnalysis = result.health;
-    document.getElementById('healthFeedback').textContent = JSON.stringify(result.health, null, 2);
+    const healthFeedback = document.getElementById('healthFeedback');
+    if (healthFeedback) {
+      healthFeedback.textContent = formatCvHealthAnalysis(result.health);
+    }
     setActiveResultsTab('health');
     showSuccessToast('CV health analysis completed.');
   } catch (error) {
@@ -1209,7 +1288,7 @@ async function handleFindSkills() {
       throw new Error(result.message || 'Skills analysis failed');
     }
     assistantResults.missingSkills = result.skills;
-    document.getElementById('skillsComparison').textContent = JSON.stringify(result.skills, null, 2);
+    document.getElementById('skillsComparison').textContent = formatModelOutput(result.skills);
     setActiveResultsTab('skills');
     showSuccessToast('Skills gap analysis complete.');
   } catch (error) {
@@ -1239,7 +1318,7 @@ async function handleEstimateSalary() {
       throw new Error(result.message || 'Salary estimation failed');
     }
     assistantResults.salaryEstimate = result.salary;
-    document.getElementById('salaryResults').textContent = JSON.stringify(result.salary, null, 2);
+    document.getElementById('salaryResults').textContent = formatModelOutput(result.salary);
     setActiveResultsTab('salary');
     showSuccessToast('Salary estimate created successfully.');
   } catch (error) {
@@ -1267,7 +1346,7 @@ async function handleRecruiterView() {
       throw new Error(result.message || 'Recruiter view generation failed');
     }
     assistantResults.recruiterView = result.view;
-    document.getElementById('recruiterViewContent').textContent = JSON.stringify(result.view, null, 2);
+    document.getElementById('recruiterViewContent').textContent = formatModelOutput(result.view);
     setActiveResultsTab('recruiter');
     showSuccessToast('Recruiter view generated successfully.');
   } catch (error) {
