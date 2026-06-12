@@ -606,7 +606,7 @@ async function generateCVFromWizard() {
   try {
     const response = await fetchWithAuth('/generate-cv', {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(attachCvPlan(payload))
     });
     const result = await response.json();
 
@@ -719,7 +719,7 @@ async function generateFromUpload() {
   try {
     const response = await fetchWithAuth('/generate-cv', {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(attachCvPlan(payload))
     });
     const result = await response.json();
 
@@ -1580,6 +1580,27 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+function getSelectedCvPlan() {
+  const serviceChecks = document.querySelectorAll('.serviceCheck');
+  if (!serviceChecks || serviceChecks.length === 0) return 'standard';
+
+  const selectedLabels = Array.from(serviceChecks)
+    .filter(cb => cb.checked)
+    .map(cb => (cb.getAttribute('aria-label') || '').toLowerCase());
+
+  if (selectedLabels.some(label => label.includes('international'))) {
+    return 'international';
+  }
+  if (selectedLabels.some(label => label.includes('standard'))) {
+    return 'standard';
+  }
+  return 'standard';
+}
+
+function attachCvPlan(payload) {
+  return { ...payload, cvType: getSelectedCvPlan() };
+}
+
 // ========== PAYMENT ==========
 
 function setupPaymentListeners() {
@@ -1632,6 +1653,9 @@ async function payWithMpesa() {
       body: JSON.stringify({
         phone: phoneNumber,
         amount: amount,
+        cvId: latestCvId || null,
+        cvType: getSelectedCvPlan(),
+        plan: getSelectedCvPlan(),
         description: 'Smart Career VAI Services'
       })
     });
@@ -1652,6 +1676,120 @@ async function payWithMpesa() {
     showPaymentStatus('Payment error occurred', 'error');
     showErrorToast('Payment failed. Please try again.');
   }
+}
+
+async function initPayPalButtonsIfConfigured() {
+  try {
+    const config = await loadAppConfig();
+    const container = document.getElementById('paypal-button-container');
+
+    if (!config) {
+      showPaymentStatus('Unable to load payment settings. Please refresh.', true);
+      if (container) {
+        container.innerHTML = '<p class="payment-disabled">Unable to initialize PayPal. Please try again later.</p>';
+      }
+      return;
+    }
+
+    if (!config.paypalConfigured || !config.paypalClientId) {
+      if (container) {
+        container.innerHTML = '<p class="payment-disabled">PayPal is not configured. Use M-Pesa instead.</p>';
+      }
+      return;
+    }
+
+    if (!window.paypal || typeof window.paypal.Buttons !== 'function') {
+      await loadPayPalSdk(config.paypalClientId);
+    }
+
+    if (window.paypal && typeof window.paypal.Buttons === 'function') {
+      await initPayPalButtons();
+    }
+  } catch (err) {
+    console.error('PayPal initialization error:', err);
+    showPaymentStatus('Failed to load PayPal checkout. Use M-Pesa instead.', true);
+  }
+}
+
+async function initPayPalButtons() {
+  if (!(window.paypal && typeof window.paypal.Buttons === 'function')) {
+    console.warn('PayPal SDK unavailable. Skipping PayPal button initialization.');
+    return;
+  }
+
+  paypal.Buttons({
+    style: { color: 'gold', shape: 'pill', label: 'paypal', layout: 'vertical' },
+    createOrder: async function() {
+      const kesAmount = Number(document.getElementById('totalAmount')?.innerText || 0);
+      const usdAmount = parseFloat((kesAmount / 130).toFixed(2));
+
+      if (kesAmount <= 0 || isNaN(usdAmount) || usdAmount <= 0) {
+        showPaymentStatus('Please select a service before initiating PayPal payment.', true);
+        throw new Error('No service selected');
+      }
+
+      try {
+        const response = await fetchWithAuth('/api/paypal/create-order', {
+          method: 'POST',
+          body: JSON.stringify({
+            amount: usdAmount,
+            cvId: latestCvId || null,
+            cvType: getSelectedCvPlan(),
+            plan: getSelectedCvPlan()
+          })
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          const errorMsg = data.error || data.message || 'PayPal order creation failed';
+          showPaymentStatus(`PayPal Error: ${errorMsg}`, true);
+          throw new Error(errorMsg);
+        }
+
+        const data = await response.json();
+        if (!data.id) {
+          const errorMsg = data.error || 'PayPal did not return an order ID';
+          showPaymentStatus(`PayPal Error: ${errorMsg}`, true);
+          throw new Error(errorMsg);
+        }
+
+        return data.id;
+      } catch (err) {
+        console.error('PayPal createOrder error:', err);
+        showPaymentStatus(`PayPal payment failed: ${err.message || 'Please try again.'}`, true);
+        throw err;
+      }
+    },
+    onApprove: async function(data) {
+      const orderId = data.orderID;
+      try {
+        showPaymentStatus('Processing PayPal payment...');
+        const response = await fetchWithAuth('/api/paypal/capture-order', {
+          method: 'POST',
+          body: JSON.stringify({ orderID: orderId })
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          const errorMsg = result.error || result.message || 'Payment capture failed';
+          showPaymentStatus(`PayPal Error: ${errorMsg}`, true);
+          throw new Error(errorMsg);
+        }
+
+        hasPaid = true;
+        updateDownloadButtons();
+        showPaymentStatus('PayPal payment successful. Your downloads are unlocked.', 'success');
+        showSuccessToast('Payment complete! Your CV and cover letter are now unlocked.');
+      } catch (err) {
+        console.error('PayPal approval error:', err);
+        showPaymentStatus(`PayPal approval failed: ${err.message || 'Please try again.'}`, true);
+      }
+    },
+    onError: function(err) {
+      console.error('PayPal Buttons error:', err);
+      showPaymentStatus(`PayPal checkout error: ${err?.message || 'Please try again.'}`, true);
+    }
+  }).render('#paypal-button-container');
 }
 
 // ========== SHARE FUNCTIONALITY ==========
@@ -1846,8 +1984,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  // Initialize app config
-  loadAppConfig();
+  // Initialize app config and PayPal checkout if configured
+  initPayPalButtonsIfConfigured();
   
   // Load saved draft if exists
   loadDraft();

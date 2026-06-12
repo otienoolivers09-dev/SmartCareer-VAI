@@ -364,6 +364,8 @@ app.get('/config', (req, res) => {
 const paymentAmountSchema = Joi.object({
     amount: Joi.number().positive().precision(2).required(),
     cvId: Joi.string().max(200).optional().allow(null),
+    cvType: Joi.string().valid('standard', 'international', 'cover_letter', 'premium').optional().allow(null),
+    plan: Joi.string().valid('standard', 'international', 'cover_letter', 'premium').optional().allow(null),
     maxUses: Joi.number().integer().min(1).max(10).optional().default(1)
 });
 
@@ -373,6 +375,8 @@ const mpesaPaymentSchema = Joi.object({
         'string.pattern.base': 'Phone must be 254XXXXXXXXX format'
     }),
     cvId: Joi.string().max(200).optional().allow(null),
+    cvType: Joi.string().valid('standard', 'international', 'cover_letter', 'premium').optional().allow(null),
+    plan: Joi.string().valid('standard', 'international', 'cover_letter', 'premium').optional().allow(null),
     maxUses: Joi.number().integer().min(1).max(10).optional().default(1)
 });
 
@@ -381,6 +385,14 @@ const extractInfoSchema = Joi.object({
 });
 
 const cvGenerationSchema = Joi.object().unknown(true);
+
+function getCvTypeInstructions(cvType) {
+    const type = (cvType || 'standard').toString().toLowerCase();
+    if (type.includes('international')) {
+        return 'Focus on international job markets, global resume formatting, concise professional English, and transferable skills for a global audience.';
+    }
+    return 'Focus on a polished standard CV format suitable for local and regional employers with ATS-friendly section headings, clear career narrative, and concise bullet points.';
+}
 
 const summaryGenerateSchema = Joi.object({
     careerGoal: Joi.string().max(200).required(),
@@ -651,11 +663,20 @@ app.post("/generate-cv", apiLimiter, verifyFirebaseToken, async (req, res) => {
             return res.status(400).json({ success: false, message: error.details[0].message });
         }
 
+        const cvType = (value.cvType || value.plan || 'standard').toString().toLowerCase();
+        const planInstructions = getCvTypeInstructions(cvType);
+
         const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             messages: [
-                { role: "system", content: "Generate a modern ATS optimized CV." },
-                { role: "user", content: JSON.stringify(value) }
+                {
+                    role: "system",
+                    content: `Generate a modern ATS optimized CV. ${planInstructions} Use plain, readable text formatted as a professional resume with headings, bullet points, and clear spacing. Do not return JSON, HTML tags, or markdown code fences.`
+                },
+                {
+                    role: "user",
+                    content: `Applicant details:\n${JSON.stringify(value, null, 2)}\n\nUse the information above to write one polished CV suitable for ${cvType === 'international' ? 'international' : 'standard'} job applications.`
+                }
             ],
             max_tokens: 2000
         });
@@ -1303,6 +1324,8 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
                 currency: 'KES', 
                 status: 'PENDING', 
                 raw: payload,
+                plan: value.plan || value.cvType || null,
+                cv_type: value.cvType || value.plan || null,
                 max_uses: value.maxUses || 1
             });
         } catch (e) {
@@ -1383,6 +1406,8 @@ app.post("/api/paypal/create-order", paymentLimiter, async (req, res) => {
                     currency: 'USD', 
                     status: 'PENDING', 
                     raw: order.result,
+                    plan: value.plan || value.cvType || null,
+                    cv_type: value.cvType || value.plan || null,
                     max_uses: value.maxUses || 1
                 });
             } catch (e) {
