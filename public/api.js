@@ -7,8 +7,10 @@ let API_BASE_URL = (() => {
    }
    const host = window.location.hostname;
    const isLocal = host === 'localhost' || host === '127.0.0.1' || window.location.protocol === 'file:';
-   if (isLocal && window.__TRY_LOCAL_API) {
-      return 'http://127.0.0.1:3000';
+   
+   // DEFAULT to localhost:3000 when running locally
+   if (isLocal) {
+      return 'http://localhost:3000';
    }
 
    // Map static frontend hosts to the API backend when the API is served on a separate host.
