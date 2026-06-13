@@ -1648,14 +1648,30 @@ function saveDraft() {
     coverLetter: latestCoverLetter,
     cvPaid: hasPaid,
     cvId: latestCvId,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    type: latestCV ? 'cv' : 'cover_letter'
   };
   
   try {
     localStorage.setItem('smartCareerDraft', JSON.stringify(draft));
-    saveHistory('Draft saved', latestCV ? 'Saved your CV draft to the career dashboard.' : 'Saved your cover letter draft.');
+    
+    // Also add to drafts history for dashboard
+    const historyKey = 'smartCareerDraftsHistory';
+    const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+    const newDraftEntry = {
+      id: `draft_${Date.now()}`,
+      type: draft.type,
+      cvId: latestCvId,
+      hasPaid: hasPaid,
+      createdAt: draft.timestamp,
+      preview: latestCV ? latestCV.substring(0, 100) + '...' : latestCoverLetter.substring(0, 100) + '...'
+    };
+    history.unshift(newDraftEntry);
+    localStorage.setItem(historyKey, JSON.stringify(history.slice(0, 50))); // Keep last 50 drafts
+    
+    saveHistory('Draft saved', latestCV ? 'Saved your CV draft.' : 'Saved your cover letter draft.');
     renderHistory();
-    showSuccessToast('Draft saved successfully!');
+    showSuccessToast('💾 Draft saved successfully!');
   } catch (err) {
     console.error('Failed to save draft:', err);
     showErrorToast('Unable to save draft');
@@ -1692,11 +1708,95 @@ function checkAndBypassLandingPageIfDraftsExist() {
         const resultsSection = document.getElementById('resultsSection');
         if (heroSection) heroSection.classList.add('hidden');
         if (resultsSection) resultsSection.classList.remove('hidden');
-        showSuccessToast('📋 Your saved drafts have been loaded!');
+        showDraftsDashboard();
+        showSuccessToast('📋 Your saved work has been loaded!');
       }
     }
   } catch (err) {
     console.error('Error checking drafts:', err);
+  }
+}
+
+function showDraftsDashboard() {
+  try {
+    const historyKey = 'smartCareerDraftsHistory';
+    const draftsHistory = JSON.parse(localStorage.getItem(historyKey) || '[]');
+    
+    if (draftsHistory.length === 0) return;
+
+    let dashboardHtml = `
+      <div class="drafts-dashboard-container" style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #0f172a;">
+        <h3 style="margin-top: 0; display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 20px;">📋</span> Your Recent Drafts
+        </h3>
+        <div style="display: grid; gap: 10px; max-height: 300px; overflow-y: auto;">
+    `;
+
+    draftsHistory.slice(0, 10).forEach((draft, idx) => {
+      const date = new Date(draft.createdAt).toLocaleDateString();
+      const typeLabel = draft.type === 'cv' ? '📄 CV' : '📝 Cover Letter';
+      const paidBadge = draft.hasPaid ? '<span style="background: #4CAF50; color: white; padding: 2px 8px; border-radius: 3px; font-size: 12px; margin-left: 8px;">✓ Paid</span>' : '<span style="background: #ff9800; color: white; padding: 2px 8px; border-radius: 3px; font-size: 12px; margin-left: 8px;">Preview</span>';
+      
+      dashboardHtml += `
+        <div style="padding: 12px; background: white; border-radius: 4px; cursor: pointer; hover: box-shadow 0 2px 4px rgba(0,0,0,0.1); border-left: 3px solid #0f172a;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>${typeLabel}${paidBadge}</strong>
+              <p style="margin: 5px 0 0 0; color: #666; font-size: 13px;">${date} • <span onclick="loadDraftById('${draft.id}')" style="color: #0f172a; cursor: pointer; text-decoration: underline;">Load</span></p>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    dashboardHtml += `
+        </div>
+        <div style="margin-top: 15px; display: flex; gap: 10px;">
+          <button onclick="showWizardSection()" class="secondary-btn" style="flex: 1;">➕ New CV</button>
+          <button onclick="showUploadSection()" class="secondary-btn" style="flex: 1;">📤 Upload CV</button>
+        </div>
+      </div>
+    `;
+
+    const resultsSection = document.getElementById('resultsSection');
+    if (resultsSection) {
+      const existingDashboard = resultsSection.querySelector('.drafts-dashboard-container');
+      if (existingDashboard) existingDashboard.remove();
+      const insertPoint = resultsSection.querySelector('.results-tabs');
+      if (insertPoint) {
+        insertPoint.insertAdjacentHTML('beforebegin', dashboardHtml);
+      }
+    }
+  } catch (err) {
+    console.error('Error showing drafts dashboard:', err);
+  }
+}
+
+function loadDraftById(draftId) {
+  try {
+    const historyKey = 'smartCareerDraftsHistory';
+    const draftsHistory = JSON.parse(localStorage.getItem(historyKey) || '[]');
+    const draft = draftsHistory.find(d => d.id === draftId);
+    
+    if (draft) {
+      // Load the full draft from the current draft storage
+      const currentDraft = JSON.parse(localStorage.getItem('smartCareerDraft') || '{}');
+      latestCV = currentDraft.cv || '';
+      latestCoverLetter = currentDraft.coverLetter || '';
+      hasPaid = Boolean(currentDraft.cvPaid);
+      latestCvId = currentDraft.cvId || draft.cvId;
+      
+      setOutputText(latestCV || latestCoverLetter);
+      updateDownloadButtons();
+      
+      const tab = draft.type === 'cv' ? 'cv' : 'cover';
+      setActiveResultsTab(tab);
+      showResultsSection();
+      showSuccessToast(`✅ Loaded ${draft.type === 'cv' ? 'CV' : 'Cover Letter'} draft`);
+    }
+  } catch (err) {
+    console.error('Error loading draft:', err);
+    showErrorToast('Failed to load draft');
   }
 }
 
