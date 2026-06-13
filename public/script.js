@@ -602,7 +602,9 @@ async function generateCVFromWizard() {
     return;
   }
 
-  showFormMessage('Generating CV...');
+  showFormMessage('🔄 Generating your professional CV...');
+  showSuccessToast('Generating CV - please wait...');
+  
   try {
     const response = await fetchWithAuth('/generate-cv', {
       method: 'POST',
@@ -619,10 +621,10 @@ async function generateCVFromWizard() {
     updateDownloadButtons();
     setOutputText(latestCV);
     saveDraft();
-    showFormSuccess('CV generated successfully.');
+    showFormSuccess('✅ CV generated successfully!');
     showResultsSection();
     if (!hasPaid) {
-      showFormMessage('Your CV is partially shown. Pay to unlock the full version.');
+      showFormMessage('🔒 Your CV preview is shown above. Unlock the full version with payment to download.', 'warning');
     }
   } catch (error) {
     console.error('Wizard CV generation error:', error);
@@ -719,7 +721,9 @@ async function generateFromUpload() {
     return;
   }
 
-  showFormMessage('Generating CV...');
+  showFormMessage('🔄 Generating improved CV...');
+  showSuccessToast('Generating CV - please wait...');
+  
   try {
     const response = await fetchWithAuth('/generate-cv', {
       method: 'POST',
@@ -736,10 +740,10 @@ async function generateFromUpload() {
     updateDownloadButtons();
     setOutputText(latestCV);
     saveDraft();
-    showFormSuccess('Improved CV generated successfully.');
+    showFormSuccess('✅ CV improved successfully!');
     showResultsSection();
     if (!hasPaid) {
-      showFormMessage('Your CV is partially shown. Pay to unlock the full version.');
+      showFormMessage('🔒 Your CV preview is shown above. Unlock the full version with payment to download.', 'warning');
     }
   } catch (error) {
     console.error('Upload CV generation error:', error);
@@ -1125,7 +1129,8 @@ async function handleGenerateCoverLetter() {
     return;
   }
 
-  showPaymentStatus('Generating your cover letter...');
+  showPaymentStatus('🔄 Generating your cover letter...');
+  showSuccessToast('Generating cover letter - please wait...');
 
   try {
     const response = await fetchWithAuth('/generate-cover-letter', {
@@ -1143,7 +1148,9 @@ async function handleGenerateCoverLetter() {
     latestCoverLetter = result.coverLetter || '';
     assistantResults.coverLetter = latestCoverLetter;
     setActiveResultsTab('cover');
-    showSuccessToast('Cover letter generated successfully.');
+    saveDraft();
+    showSuccessToast('✅ Cover letter generated successfully!');
+    showPaymentStatus('Cover letter ready - download or share', false);
     revealPremiumFeatures();
   } catch (error) {
     console.error('Cover letter generation error:', error);
@@ -1158,7 +1165,8 @@ async function handleGenerateInterviewTips() {
     return;
   }
 
-  showPaymentStatus('Generating interview preparation tips...');
+  showPaymentStatus('🔄 Generating interview preparation tips...');
+  showSuccessToast('Generating interview tips - please wait...');
 
   try {
     const response = await fetchWithAuth('/generate-interview-tips', {
@@ -1175,7 +1183,8 @@ async function handleGenerateInterviewTips() {
     }
     assistantResults.interviewTips = result.interviewTips || '';
     setActiveResultsTab('interview');
-    showSuccessToast('Interview preparation generated successfully.');
+    showSuccessToast('✅ Interview preparation generated successfully!');
+    showPaymentStatus('Interview tips ready - download or practice', false);
   } catch (error) {
     console.error('Interview preparation error:', error);
     showPaymentStatus(error.message || 'Interview tips generation failed', true);
@@ -1189,7 +1198,9 @@ async function handleGenerateLinkedIn() {
     return;
   }
 
-  showPaymentStatus('Generating LinkedIn summary...');
+  showPaymentStatus('🔄 Generating LinkedIn summary...');
+  showSuccessToast('Generating LinkedIn profile - please wait...');
+  
   try {
     const response = await fetchWithAuth('/generate-linkedin-summary', {
       method: 'POST',
@@ -1207,7 +1218,8 @@ async function handleGenerateLinkedIn() {
     assistantResults.linkedInSummary = result.linkedInSummary || result.summary || '';
     const linkedInOutput = document.getElementById('linkedInOutput');
     if (linkedInOutput) linkedInOutput.textContent = assistantResults.linkedInSummary;
-    showSuccessToast('LinkedIn summary generated successfully.');
+    showSuccessToast('✅ LinkedIn summary generated successfully!');
+    showPaymentStatus('LinkedIn summary ready - copy and update your profile', false);
     revealPremiumFeatures();
   } catch (error) {
     console.error('LinkedIn generation error:', error);
@@ -1222,7 +1234,9 @@ async function handleGenerateRoadmap() {
     return;
   }
 
-  showPaymentStatus('Generating career roadmap...');
+  showPaymentStatus('🔄 Generating career roadmap...');
+  showSuccessToast('Generating career roadmap - please wait...');
+  
   try {
     const response = await fetchWithAuth('/generate-career-roadmap', {
       method: 'POST',
@@ -1239,7 +1253,8 @@ async function handleGenerateRoadmap() {
     assistantResults.careerRoadmap = result.roadmap || result.plan || '';
     const roadmapOutput = document.getElementById('roadmapOutput');
     if (roadmapOutput) roadmapOutput.textContent = assistantResults.careerRoadmap;
-    showSuccessToast('Career roadmap generated successfully.');
+    showSuccessToast('✅ Career roadmap generated successfully!');
+    showPaymentStatus('Roadmap ready - follow these steps for career growth', false);
     revealPremiumFeatures();
   } catch (error) {
     console.error('Career roadmap error:', error);
@@ -1660,10 +1675,28 @@ function loadDraft() {
         setOutputText(latestCV || latestCoverLetter);
         updateDownloadButtons();
       }
-      showSuccessToast('Draft loaded!');
     }
   } catch (err) {
     console.error('Failed to load draft:', err);
+  }
+}
+
+function checkAndBypassLandingPageIfDraftsExist() {
+  try {
+    const draft = localStorage.getItem('smartCareerDraft');
+    if (draft) {
+      const parsed = JSON.parse(draft);
+      if (parsed.cv || parsed.coverLetter) {
+        // User has saved work - bypass landing page and show results
+        const heroSection = document.getElementById('heroSection');
+        const resultsSection = document.getElementById('resultsSection');
+        if (heroSection) heroSection.classList.add('hidden');
+        if (resultsSection) resultsSection.classList.remove('hidden');
+        showSuccessToast('📋 Your saved drafts have been loaded!');
+      }
+    }
+  } catch (err) {
+    console.error('Error checking drafts:', err);
   }
 }
 
@@ -1968,6 +2001,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', handleLogout);
   }
+  
+  // Load drafts and check if user should skip landing page
+  loadDraft();
+  checkAndBypassLandingPageIfDraftsExist();
   
   // Initialize wizard
   initWizardNavigation();

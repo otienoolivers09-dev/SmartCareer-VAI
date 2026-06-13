@@ -389,9 +389,9 @@ const cvGenerationSchema = Joi.object().unknown(true);
 function getCvTypeInstructions(cvType) {
     const type = (cvType || 'standard').toString().toLowerCase();
     if (type.includes('international')) {
-        return 'Follow international CV standards with clear section headings, transferable skills, concise professional English, and ATS-friendly formatting. Avoid tables, emojis, graphics, and non-standard formatting.';
+        return 'Follow international CV standards with clear section headings, transferable skills, concise professional English, and ATS-friendly formatting. Use strong section separators (lines of dashes) between major sections. Avoid tables, emojis, graphics, and non-standard formatting.';
     }
-    return 'Follow a polished professional CV structure with standard section headings, concise achievement-based bullet points, strong action verbs, and ATS-friendly formatting. Avoid tables, emojis, graphics, and non-standard formatting.';
+    return 'Follow a polished professional CV structure with standard section headings, concise achievement-based bullet points, strong action verbs, and ATS-friendly formatting. Use strong section separators (lines of dashes) between major sections. Avoid tables, emojis, graphics, and non-standard formatting.';
 }
 
 const summaryGenerateSchema = Joi.object({
@@ -666,84 +666,108 @@ app.post("/generate-cv", apiLimiter, verifyFirebaseToken, async (req, res) => {
         const cvType = (value.cvType || value.plan || 'standard').toString().toLowerCase();
         const systemPrompt = cvType === 'international'
             ? `You are a Certified International Resume Writer and Career Coach with expertise in ATS optimization.
-Create a world-class professional CV that meets hiring standards in the USA, UK, Canada, Australia, Europe, and international remote workplaces.
+Create a world-class professional CV with CLEAR VISUAL SECTION SEPARATORS that meets hiring standards globally.
 
-Requirements:
-- Produce a highly professional, ATS-friendly CV.
-- Use clear and modern business language.
-- Create a powerful Professional Summary tailored to the candidate's background.
-- Rewrite all work experience into achievement-oriented bullet points.
-- Begin each bullet point with strong action verbs.
-- Quantify achievements wherever possible using numbers, percentages, revenue, productivity improvements, customer satisfaction metrics, project outcomes, or measurable results.
-- Include relevant industry keywords for ATS systems.
-- Eliminate weak phrases such as: Responsible for, Duties included, Worked on, Assisted with.
-- Use concise and impactful wording.
-- Ensure consistency in formatting and writing style.
+CRITICAL FORMATTING REQUIREMENTS:
+- Use "=======================================" to separate major sections for visual clarity
+- Structure must be immediately scannable
+- Each section header should be on its own line followed by section separator line
+- Use bullet points (-) for achievements under each role
+- Include dates and locations for each position
+- Quantify ALL achievements (numbers, %, $, time saved, growth metrics)
+- Start each bullet with STRONG ACTION VERBS (Led, Increased, Achieved, Delivered, Developed, Managed, etc.)
+- NO weak phrases (Responsible for, Duties included, Worked on, Assisted with)
+- Professional, modern business English for international audience
+- ATS-friendly: clean text, no symbols, no graphics, no tables
 
-Structure:
+STRUCTURE (exactly as shown):
 FULL NAME
-
-CONTACT INFORMATION
-Phone | Email | LinkedIn | Location
+Email | Phone | LinkedIn Profile URL | City, Country
 
 PROFESSIONAL SUMMARY
+[2-3 compelling lines about value proposition and career trajectory]
 
 CORE COMPETENCIES
+- Skill 1
+- Skill 2
+- Skill 3
+[key industry keywords for ATS]
 
 PROFESSIONAL EXPERIENCE
 
+Company Name | Job Title | Location | Month Year - Month Year
+- Achievement with quantified result (numbers/% if possible)
+- Key responsibility with measurable impact
+- Recognition or award if applicable
+
 EDUCATION
 
-CERTIFICATIONS
+University Name | Degree & Field | Graduation Year | Distinction (if applicable)
 
-TECHNICAL SKILLS
+CERTIFICATIONS & LANGUAGES
 
-PROJECTS (if applicable)
-
-LANGUAGES (if applicable)
+Certification Name | Issuing Body | Year
+Language: Proficiency Level
 
 REFERENCES AVAILABLE UPON REQUEST
 
-Formatting Rules:
-- No tables
-- No graphics
-- No emojis
-- No decorative symbols
-- No photos
-- No excessive personal details
-- ATS compliant
-- Professional international standards
+OUTPUT INSTRUCTIONS:
+- Return ONLY the formatted CV text - nothing else
+- NO markdown syntax, NO JSON, NO HTML tags, NO code fences, NO explanations
+- Make it visually clear with section separators
+- Ensure immediate readability for both ATS systems and recruiters
+- Keep to 1-2 pages of content`
+            : `You are an experienced Professional CV Writer specializing in job-winning resume creation.
+Create a professional, well-structured CV with CLEAR VISUAL SECTION SEPARATORS that wins interviews.
 
-Output only the final CV.`
-            : `You are an experienced Professional CV Writer.
-Create a clean, professional, and well-structured CV suitable for general employment applications.
+CRITICAL FORMATTING REQUIREMENTS:
+- Use "=======================================" to separate major sections for visual clarity
+- Structure must be immediately scannable and easy to read
+- Each section header should be on its own line followed by section separator line
+- Use bullet points (-) for achievements under each role
+- Include dates and locations for each position
+- Quantify achievements where possible (numbers, %, $, time, growth metrics)
+- Start each bullet with STRONG ACTION VERBS (Led, Increased, Achieved, Delivered, Developed, Managed, etc.)
+- NO weak language (Responsible for, Duties included, Worked on, Assisted with)
+- Professional, clear language suitable for your target industry
+- ATS-friendly: clean text, no symbols, no graphics, no tables
 
-Requirements:
-- Use clear and professional language.
-- Create a concise Professional Summary.
-- Present work experience using bullet points.
-- Highlight key achievements and responsibilities.
-- Include relevant skills and qualifications.
-- Ensure the CV is easy to read and professionally organized.
-
-Structure:
+STRUCTURE (exactly as shown):
 FULL NAME
+Email | Phone | LinkedIn Profile URL | City, Country
 
-CONTACT INFORMATION
+PROFESSIONAL SUMMARY
+[2-3 compelling lines about your value and career goals]
 
-CAREER PROFILE
+CORE COMPETENCIES
+- Skill 1
+- Skill 2
+- Skill 3
+[key industry keywords for ATS]
 
-WORK EXPERIENCE
+PROFESSIONAL EXPERIENCE
+
+Company Name | Job Title | Location | Month Year - Month Year
+- Key achievement with quantified result (numbers/% if possible)
+- Major responsibility with measurable impact
+- Special recognition or award if applicable
 
 EDUCATION
 
-PROFESSIONAL SKILLS
+University/College Name | Degree & Field | Graduation Year | Distinction (if applicable)
 
-CERTIFICATIONS (if applicable)
+PROFESSIONAL CERTIFICATIONS
 
-REFERENCES
+Certification Name | Issuing Body | Year
 
-Formatting Rules:
+REFERENCES AVAILABLE UPON REQUEST
+
+OUTPUT INSTRUCTIONS:
+- Return ONLY the formatted CV text - nothing else
+- NO markdown syntax, NO JSON, NO HTML tags, NO code fences, NO explanations
+- Make it visually clear with section separators
+- Ensure immediate readability for both ATS systems and hiring managers
+- Keep to 1-2 pages of content`;
 - Simple professional layout
 - Easy to read
 - Consistent formatting
@@ -800,9 +824,19 @@ Output only the final CV.`;
             return res.json({ success: true, cv: fullCv, hasPaid: true, cvId });
         }
 
-        const words = fullCv.split(/\s+/).filter(Boolean);
-        const truncated = words.slice(0, 700).join(' ');
-        return res.json({ success: true, cv: truncated, hasPaid: false, cvId, totalWords: words.length });
+        // Calculate 25% preview by character count to preserve section structure
+        const previewCharCount = Math.floor(fullCv.length * 0.25);
+        const truncated = fullCv.substring(0, previewCharCount) + '\n\n[... Preview truncated. Unlock full CV with payment ...]';
+        
+        return res.json({ 
+            success: true, 
+            cv: truncated, 
+            hasPaid: false, 
+            cvId, 
+            totalCharacters: fullCv.length,
+            previewCharacters: previewCharCount,
+            message: 'Your CV has been generated! Unlock the full version with payment to download.'
+        });
 
     } catch (error) {
         // Log full error with stack and any response payload for easier debugging (avoid leaking secrets)
