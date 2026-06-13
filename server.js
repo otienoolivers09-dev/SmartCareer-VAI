@@ -768,13 +768,6 @@ OUTPUT INSTRUCTIONS:
 - Make it visually clear with section separators
 - Ensure immediate readability for both ATS systems and hiring managers
 - Keep to 1-2 pages of content`;
-- Simple professional layout
-- Easy to read
-- Consistent formatting
-- No unnecessary graphics
-- Suitable for most employers
-
-Output only the final CV.`;
 
         const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini",
