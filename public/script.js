@@ -2078,6 +2078,18 @@ function copyShareLink() {
   });
 }
 
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('Service worker registered with scope:', registration.scope);
+      })
+      .catch((error) => {
+        console.warn('Service worker registration failed:', error);
+      });
+  }
+}
+
 // ========== INITIALIZATION ==========
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2112,6 +2124,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Initialize signup choice
   initSignupChoice();
+  
+  // Register service worker for offline and installable behavior
+  registerServiceWorker();
   
   // Initialize form entries buttons
   const addEducationBtn = document.getElementById('addEducationRowBtn');
