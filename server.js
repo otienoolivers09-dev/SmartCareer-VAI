@@ -13,6 +13,15 @@ import admin from "firebase-admin";
 import payments from "./payments-firebase.js";
 import fs from 'fs';
 import { truncateToFirstWords } from './public/payment-utils.js';
+import {
+    resolveGenerationContext,
+    buildFallbackCoverLetter,
+    buildFallbackLinkedInSummary,
+    buildFallbackCareerRoadmap,
+    buildFallbackInterviewTips,
+    buildFallbackHealthAnalysis,
+    buildFallbackSkillsAnalysis
+} from './server/ai-fallbacks.js';
 
 dotenv.config();
 
@@ -345,7 +354,18 @@ function isMpesaConfigured() {
     );
 }
 
+function getMpesaConfigStatus() {
+    const missing = [];
+    if (!process.env.MPESA_CONSUMER_KEY) missing.push('MPESA_CONSUMER_KEY');
+    if (!process.env.MPESA_CONSUMER_SECRET) missing.push('MPESA_CONSUMER_SECRET');
+    if (!process.env.MPESA_SHORTCODE) missing.push('MPESA_SHORTCODE');
+    if (!process.env.MPESA_PASSKEY) missing.push('MPESA_PASSKEY');
+    if (!process.env.MPESA_CALLBACK_URL) missing.push('MPESA_CALLBACK_URL');
+    return { configured: missing.length === 0, missing };
+}
+
 app.get('/config', (req, res) => {
+    const mpesaStatus = getMpesaConfigStatus();
     res.json({
         paypalClientId: getEnvString('PAYPAL_CLIENT_ID') || null,
         paypalConfigured: isPayPalConfigured(),
@@ -353,7 +373,8 @@ app.get('/config', (req, res) => {
         paypalReturnUrl: getEnvString('PAYPAL_RETURN_URL') || 'https://smartcareervai.onrender.com/success.html',
         paypalCancelUrl: getEnvString('PAYPAL_CANCEL_URL') || 'https://smartcareervai.onrender.com/cancel.html',
         paypalWebhookId: getEnvString('PAYPAL_WEBHOOK_ID') || null,
-        mpesaConfigured: isMpesaConfigured(),
+        mpesaConfigured: mpesaStatus.configured,
+        mpesaMissing: mpesaStatus.missing,
         firebaseConfigured: firebaseInitialized,
         openAIConfigured: isOpenAIConfigured()
     });
@@ -887,28 +908,20 @@ app.post('/analyze-cv-health', apiLimiter, verifyFirebaseToken, async (req, res)
             return res.status(400).json({ success: false, message: 'CV content required' });
         }
 
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-                { role: "system", content: "Analyze the provided CV and score different sections out of 100. Return a JSON object with keys: overall, summary, skills, experience, education, ats_compatibility, and an array of improvements." },
-                { role: "user", content: `Analyze this CV:\n${cv}` }
-            ],
-            max_tokens: 800
-        });
-
         let healthData = null;
         try {
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "Analyze the provided CV and score different sections out of 100. Return a JSON object with keys: overall, summary, skills, experience, education, ats_compatibility, and an array of improvements." },
+                    { role: "user", content: `Analyze this CV:\n${cv}` }
+                ],
+                max_tokens: 800
+            });
             healthData = JSON.parse(completion.choices[0].message.content);
-        } catch (e) {
-            healthData = {
-                overall: 75,
-                summary: 70,
-                skills: 80,
-                experience: 75,
-                education: 85,
-                ats_compatibility: 72,
-                improvements: ["Add quantifiable achievements", "Include action verbs", "Improve keyword density"]
-            };
+        } catch (error) {
+            console.warn('Using fallback CV health analysis:', error.message);
+            healthData = buildFallbackHealthAnalysis(cv);
         }
 
         res.json({ success: true, health: healthData });
@@ -929,25 +942,20 @@ app.post('/find-missing-skills', apiLimiter, verifyFirebaseToken, async (req, re
             return res.status(400).json({ success: false, message: 'CV content and job role required' });
         }
 
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-                { role: "system", content: "Compare the provided CV with a target job role. Return a JSON object with keys: user_skills (array of skills found in CV), required_skills (array of skills needed for the role), missing_skills (skills needed but not in CV), learning_path (recommended courses/certifications)." },
-                { role: "user", content: `CV:\n${cv}\n\nTarget Job: ${jobRole}` }
-            ],
-            max_tokens: 800
-        });
-
         let skillsData = null;
         try {
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "Compare the provided CV with a target job role. Return a JSON object with keys: user_skills (array of skills found in CV), required_skills (array of skills needed for the role), missing_skills (skills needed but not in CV), learning_path (recommended courses/certifications)." },
+                    { role: "user", content: `CV:\n${cv}\n\nTarget Job: ${jobRole}` }
+                ],
+                max_tokens: 800
+            });
             skillsData = JSON.parse(completion.choices[0].message.content);
-        } catch (e) {
-            skillsData = {
-                user_skills: ["Communication", "Leadership"],
-                required_skills: ["Technical Skills", "Project Management", "Analytics"],
-                missing_skills: ["Project Management", "Analytics"],
-                learning_path: ["Enroll in Project Management certification", "Take Analytics course"]
-            };
+        } catch (error) {
+            console.warn('Using fallback skills analysis:', error.message);
+            skillsData = buildFallbackSkillsAnalysis(cv, jobRole);
         }
 
         res.json({ success: true, skills: skillsData });
@@ -1201,20 +1209,30 @@ app.post("/generate-cover-letter", apiLimiter, verifyFirebaseToken, async (req, 
         return res.status(503).json({ success: false, message: 'OpenAI API key is not configured' });
     }
     try {
-        const { fullName, jobTarget, skills } = req.body;
-        if (!fullName || !jobTarget || !skills) {
+        const { fullName, name, jobTarget, careerGoal, targetRole, skills, summary, experience, cv } = req.body || {};
+        const resolvedName = fullName || name || 'Candidate';
+        const resolvedTarget = jobTarget || careerGoal || targetRole;
+        if (!resolvedTarget) {
             return res.status(400).json({ success: false, message: "Missing required fields" });
         }
 
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-                { role: "system", content: "Generate a professional cover letter. Return only the cover letter text." },
-                { role: "user", content: `Full Name: ${fullName}\nJob Target: ${jobTarget}\nSkills: ${skills}` }
-            ],
-            max_tokens: 1500
-        });
-        res.json({ success: true, coverLetter: completion.choices[0].message.content });
+        const context = resolveGenerationContext({ fullName: resolvedName, jobTarget: resolvedTarget, skills, summary, experience, cv });
+        let coverLetter = '';
+        try {
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "Generate a professional cover letter. Return only the cover letter text." },
+                    { role: "user", content: `Full Name: ${context.fullName}\nJob Target: ${context.jobTarget}\nSkills: ${context.skills.join(', ')}\nAdditional details: ${context.experience}` }
+                ],
+                max_tokens: 1500
+            });
+            coverLetter = completion.choices[0].message.content;
+        } catch (error) {
+            console.warn('Using fallback cover letter generation:', error.message);
+            coverLetter = buildFallbackCoverLetter(context);
+        }
+        res.json({ success: true, coverLetter });
     } catch (error) {
         console.error("Cover Letter Generation Error:", error.message);
         res.status(500).json({ success: false, message: "Cover letter generation failed" });
@@ -1227,21 +1245,31 @@ app.post('/generate-linkedin-summary', apiLimiter, verifyFirebaseToken, async (r
     }
 
     try {
-        const { fullName, jobTarget, skills, summary } = req.body;
-        if (!fullName || !jobTarget || !skills) {
+        const { fullName, name, jobTarget, careerGoal, targetRole, skills, summary, cv } = req.body || {};
+        const resolvedName = fullName || name || 'Candidate';
+        const resolvedTarget = jobTarget || careerGoal || targetRole;
+        if (!resolvedTarget) {
             return res.status(400).json({ success: false, message: 'Missing required fields for LinkedIn summary generation' });
         }
 
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-                { role: 'system', content: 'You are an expert LinkedIn profile writer. Generate a professional LinkedIn headline and summary based on the candidate profile. Return only the summary text.' },
-                { role: 'user', content: `Name: ${fullName}\nTarget role: ${jobTarget}\nSkills: ${skills}\nProfessional summary: ${summary || 'No summary provided'}` }
-            ],
-            max_tokens: 700
-        });
+        const context = resolveGenerationContext({ fullName: resolvedName, jobTarget: resolvedTarget, skills, summary, cv });
+        let linkedInSummary = '';
+        try {
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: 'system', content: 'You are an expert LinkedIn profile writer. Generate a professional LinkedIn headline and summary based on the candidate profile. Return only the summary text.' },
+                    { role: 'user', content: `Name: ${context.fullName}\nTarget role: ${context.jobTarget}\nSkills: ${context.skills.join(', ')}\nProfessional summary: ${context.summary || 'No summary provided'}` }
+                ],
+                max_tokens: 700
+            });
+            linkedInSummary = completion.choices[0].message.content.trim();
+        } catch (error) {
+            console.warn('Using fallback LinkedIn summary generation:', error.message);
+            linkedInSummary = buildFallbackLinkedInSummary(context);
+        }
 
-        res.json({ success: true, linkedInSummary: completion.choices[0].message.content.trim() });
+        res.json({ success: true, linkedInSummary });
     } catch (error) {
         console.error('LinkedIn Summary Generation Error:', error.message);
         res.status(500).json({ success: false, message: 'LinkedIn summary generation failed' });
@@ -1254,21 +1282,30 @@ app.post('/generate-career-roadmap', apiLimiter, verifyFirebaseToken, async (req
     }
 
     try {
-        const { careerGoal, skills, experience } = req.body;
-        if (!careerGoal || !skills) {
+        const { careerGoal, jobTarget, targetRole, skills, experience, cv } = req.body || {};
+        const resolvedGoal = careerGoal || jobTarget || targetRole;
+        if (!resolvedGoal) {
             return res.status(400).json({ success: false, message: 'Missing required fields for career roadmap generation' });
         }
 
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-                { role: 'system', content: 'You are a career coach. Create a practical 3-month career roadmap with goal steps, skills development, networking, and interview readiness for the target role.' },
-                { role: 'user', content: `Target role: ${careerGoal}\nSkills: ${skills}\nExperience details: ${experience || 'No details provided'}` }
-            ],
-            max_tokens: 800
-        });
+        const context = resolveGenerationContext({ jobTarget: resolvedGoal, skills, experience, cv });
+        let roadmap = '';
+        try {
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: 'system', content: 'You are a career coach. Create a practical 3-month career roadmap with goal steps, skills development, networking, and interview readiness for the target role.' },
+                    { role: 'user', content: `Target role: ${context.jobTarget}\nSkills: ${context.skills.join(', ')}\nExperience details: ${context.experience}` }
+                ],
+                max_tokens: 800
+            });
+            roadmap = completion.choices[0].message.content.trim();
+        } catch (error) {
+            console.warn('Using fallback career roadmap generation:', error.message);
+            roadmap = buildFallbackCareerRoadmap(context);
+        }
 
-        res.json({ success: true, roadmap: completion.choices[0].message.content.trim() });
+        res.json({ success: true, roadmap });
     } catch (error) {
         console.error('Career Roadmap Generation Error:', error.message);
         res.status(500).json({ success: false, message: 'Career roadmap generation failed' });
@@ -1280,20 +1317,29 @@ app.post("/generate-interview-tips", apiLimiter, verifyFirebaseToken, async (req
         return res.status(503).json({ success: false, message: 'OpenAI API key is not configured' });
     }
     try {
-        const { jobTarget, skills, experience } = req.body;
-        if (!jobTarget || !skills) {
+        const { jobTarget, careerGoal, targetRole, skills, experience, cv } = req.body || {};
+        const resolvedTarget = jobTarget || careerGoal || targetRole;
+        if (!resolvedTarget) {
             return res.status(400).json({ success: false, message: "Missing required fields" });
         }
 
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-                { role: "system", content: "You are an expert career coach. Generate interview tips for this role." },
-                { role: "user", content: `Job: ${jobTarget}\nSkills: ${skills}\nExp: ${experience || 'N/A'}` }
-            ],
-            max_tokens: 1500
-        });
-        res.json({ success: true, interviewTips: completion.choices[0].message.content });
+        const context = resolveGenerationContext({ jobTarget: resolvedTarget, skills, experience, cv });
+        let interviewTips = '';
+        try {
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "You are an expert career coach. Generate interview tips for this role." },
+                    { role: "user", content: `Job: ${context.jobTarget}\nSkills: ${context.skills.join(', ')}\nExp: ${context.experience}` }
+                ],
+                max_tokens: 1500
+            });
+            interviewTips = completion.choices[0].message.content;
+        } catch (error) {
+            console.warn('Using fallback interview tips generation:', error.message);
+            interviewTips = buildFallbackInterviewTips(context);
+        }
+        res.json({ success: true, interviewTips });
     } catch (error) {
         console.error("Interview Tips Error:", error.message);
         res.status(500).json({ success: false, message: "Interview tips generation failed" });

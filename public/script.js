@@ -1167,7 +1167,9 @@ async function handleGenerateCoverLetter() {
       body: JSON.stringify({
         fullName: payload.fullName,
         jobTarget: payload.jobTarget,
-        skills: payload.skills.join(', ')
+        careerGoal: payload.jobTarget,
+        skills: Array.isArray(payload.skills) ? payload.skills : [payload.skills],
+        cv: payload.cv || latestCV || collectUploadData().existingCv || ''
       })
     });
     const result = await response.json();
@@ -1880,32 +1882,42 @@ function attachCvPlan(payload) {
 
 function setupPaymentListeners() {
   const serviceChecks = document.querySelectorAll('.serviceCheck');
-  const mpesaPhoneInput = document.getElementById('mpesaPhone');
   const payServiceBtn = document.getElementById('payServiceBtn');
-  
-  serviceChecks.forEach(check => {
-    check.addEventListener('change', () => {
-      let total = 0;
-      serviceChecks.forEach(c => {
-        if (c.checked) total += parseInt(c.value);
-      });
-      
-      const totalAmount = document.getElementById('totalAmount');
-      const payAmount = document.getElementById('payAmountM');
-      if (totalAmount) totalAmount.textContent = total;
-      if (payAmount) payAmount.textContent = total;
-      if (payServiceBtn) {
-        payServiceBtn.disabled = total === 0;
-        payServiceBtn.textContent = total === 0 ? 'Pay with M-Pesa' : `Pay KES ${total} with M-Pesa`;
-      }
+
+  const updatePaymentSummary = () => {
+    let total = 0;
+    serviceChecks.forEach(c => {
+      if (c.checked) total += parseInt(c.value || 0, 10);
     });
+
+    const totalAmount = document.getElementById('totalAmount');
+    const payAmount = document.getElementById('payAmountM');
+    if (totalAmount) totalAmount.textContent = total;
+    if (payAmount) payAmount.textContent = total;
+    if (payServiceBtn) {
+      payServiceBtn.disabled = total === 0;
+      payServiceBtn.classList.toggle('disabled', total === 0);
+      payServiceBtn.textContent = total === 0 ? 'Pay with M-Pesa' : `Pay KES ${total} with M-Pesa`;
+    }
+  };
+
+  serviceChecks.forEach(check => {
+    check.addEventListener('change', updatePaymentSummary);
   });
+
+  updatePaymentSummary();
 }
 
 async function payWithMpesa() {
   const mpesaPhone = document.getElementById('mpesaPhone');
   const total = document.getElementById('totalAmount');
+  const serviceChecks = document.querySelectorAll('.serviceCheck:checked');
   
+  if (serviceChecks.length === 0) {
+    showErrorToast('Please select a service before paying.');
+    return;
+  }
+
   if (!mpesaPhone || !mpesaPhone.value) {
     showErrorToast('Please enter your M-Pesa phone number');
     return;
@@ -2029,7 +2041,7 @@ async function initPayPalButtons() {
           throw new Error(errorMsg);
         }
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (!data.id) {
           const errorMsg = data.error || 'PayPal did not return an order ID';
           showPaymentStatus(`PayPal Error: ${errorMsg}`, true);
@@ -2051,7 +2063,7 @@ async function initPayPalButtons() {
           method: 'POST',
           body: JSON.stringify({ orderID: orderId })
         });
-        const result = await response.json();
+        const result = await response.json().catch(() => ({}));
 
         if (!response.ok || !result.success) {
           const errorMsg = result.error || result.message || 'Payment capture failed';
