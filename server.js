@@ -345,22 +345,17 @@ function isOpenAIConfigured() {
 }
 
 function isMpesaConfigured() {
-    return Boolean(
-        process.env.MPESA_CONSUMER_KEY &&
-        process.env.MPESA_CONSUMER_SECRET &&
-        process.env.MPESA_SHORTCODE &&
-        process.env.MPESA_PASSKEY &&
-        process.env.MPESA_CALLBACK_URL
-    );
+    const status = getMpesaConfigStatus();
+    return status.configured;
 }
 
 function getMpesaConfigStatus() {
     const missing = [];
-    if (!process.env.MPESA_CONSUMER_KEY) missing.push('MPESA_CONSUMER_KEY');
-    if (!process.env.MPESA_CONSUMER_SECRET) missing.push('MPESA_CONSUMER_SECRET');
-    if (!process.env.MPESA_SHORTCODE) missing.push('MPESA_SHORTCODE');
-    if (!process.env.MPESA_PASSKEY) missing.push('MPESA_PASSKEY');
-    if (!process.env.MPESA_CALLBACK_URL) missing.push('MPESA_CALLBACK_URL');
+    if (!getEnvString('MPESA_CONSUMER_KEY')) missing.push('MPESA_CONSUMER_KEY');
+    if (!getEnvString('MPESA_CONSUMER_SECRET')) missing.push('MPESA_CONSUMER_SECRET');
+    if (!getEnvString('MPESA_SHORTCODE')) missing.push('MPESA_SHORTCODE');
+    if (!getEnvString('MPESA_PASSKEY')) missing.push('MPESA_PASSKEY');
+    if (!getEnvString('MPESA_CALLBACK_URL')) missing.push('MPESA_CALLBACK_URL');
     return { configured: missing.length === 0, missing };
 }
 

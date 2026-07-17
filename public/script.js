@@ -1,7 +1,7 @@
 import { login, registerUser, logout, onAuthStateChangedListener, getCurrentUser, getFirebaseToken } from './auth.js';
 import { apiUrl, fetchWithAuth, loadAppConfig, loadPayPalSdk, showPaymentStatus, normalizePhoneNumber, updateTotalAmount, downloadTextAsPdf } from './api.js?v=3';
 import { requireSignedInUser } from './auth-guard.js';
-import { truncateToFirstWords } from './payment-utils.js';
+import { getCoverLetterPreviewText, truncateToFirstWords } from './payment-utils.js';
 
 /* ========================================
    SMART CAREER VAI - ENHANCED SCRIPT v3
@@ -1065,7 +1065,9 @@ function getResultsTextForTab(tab) {
     case 'cv':
       return latestCV || 'No generated CV available yet.';
     case 'cover':
-      return latestCoverLetter || 'No cover letter generated yet.';
+      return latestCoverLetter
+        ? getCoverLetterPreviewText(latestCoverLetter, hasPaid)
+        : 'No cover letter generated yet.';
     case 'interview':
       return assistantResults.interviewTips || 'No interview tips generated yet.';
     case 'health':
@@ -1956,6 +1958,7 @@ async function payWithMpesa() {
     if (response.ok && result.success !== false) {
       hasPaid = true;
       updateDownloadButtons();
+      setActiveResultsTab(assistantResults.currentTab || 'cv');
       showPaymentStatus('Payment confirmed. Your premium service is now ready. The full CV and download buttons are unlocked.', 'success');
       showSuccessToast('Payment confirmed. Your service has been generated successfully and is ready to download.');
       await fetchFullCv();
@@ -2073,6 +2076,7 @@ async function initPayPalButtons() {
 
         hasPaid = true;
         updateDownloadButtons();
+        setActiveResultsTab(assistantResults.currentTab || 'cv');
         showPaymentStatus('PayPal payment successful. Your premium service is now ready. The full CV and download buttons are unlocked.', 'success');
         showSuccessToast('Payment complete! Your service has been generated successfully and is ready to download.');
         await fetchFullCv();
