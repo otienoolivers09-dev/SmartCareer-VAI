@@ -1,5 +1,6 @@
 import { login, registerUser, logout, onAuthStateChangedListener, getCurrentUser, getFirebaseToken } from './auth.js';
 import { apiUrl, fetchWithAuth, loadAppConfig, loadPayPalSdk, showPaymentStatus, normalizePhoneNumber, updateTotalAmount, downloadTextAsPdf } from './api.js?v=3';
+import { truncateToFirstWords } from './payment-utils.js';
 
 /* ========================================
    SMART CAREER VAI - ENHANCED SCRIPT v3
@@ -908,7 +909,8 @@ function initConditionalSections() {
 function setOutputText(text) {
   const output = document.getElementById('packageOutput');
   if (!output) return;
-  output.textContent = text || 'Generated content appears here...';
+  const safeText = typeof text === 'string' ? text : '';
+  output.textContent = safeText || 'Generated content appears here...';
 }
 
 async function copyOutput() {
@@ -1883,8 +1885,13 @@ async function payWithMpesa() {
   }
   
   const phoneNumber = normalizePhoneNumber(mpesaPhone.value);
-  const amount = parseInt(total.textContent);
+  const amount = parseInt(total?.textContent || '0', 10);
   
+  if (!phoneNumber) {
+    showErrorToast('Please enter a valid phone number in 07XXXXXXXX format');
+    return;
+  }
+
   if (!amount || amount === 0) {
     showErrorToast('Please select a service');
     return;
@@ -1893,7 +1900,7 @@ async function payWithMpesa() {
   showPaymentStatus('Initiating payment...');
   
   try {
-    const response = await fetchWithAuth('/api/payment/mpesa', {
+    const response = await fetchWithAuth('/pay-premium', {
       method: 'POST',
       body: JSON.stringify({
         phone: phoneNumber,
@@ -1909,9 +1916,10 @@ async function payWithMpesa() {
     if (response.ok && result.success !== false) {
       hasPaid = true;
       updateDownloadButtons();
-      showPaymentStatus('Payment confirmed. Your CV and cover letter are now unlocked.', 'success');
-      showSuccessToast('Payment confirmed. Premium downloads unlocked.');
+      showPaymentStatus('Payment confirmed. Your premium service is now ready. The full CV and download buttons are unlocked.', 'success');
+      showSuccessToast('Payment confirmed. Your service has been generated successfully and is ready to download.');
       await fetchFullCv();
+      showFormSuccess('🎉 Your service is ready. The full content is now unlocked for download.');
     } else {
       const errorMsg = result.message || result.error || 'Unable to initiate payment';
       showPaymentStatus(`Payment initiation failed: ${errorMsg}`, 'error');
@@ -2025,9 +2033,10 @@ async function initPayPalButtons() {
 
         hasPaid = true;
         updateDownloadButtons();
-        showPaymentStatus('PayPal payment successful. Your downloads are unlocked.', 'success');
-        showSuccessToast('Payment complete! Your CV and cover letter are now unlocked.');
+        showPaymentStatus('PayPal payment successful. Your premium service is now ready. The full CV and download buttons are unlocked.', 'success');
+        showSuccessToast('Payment complete! Your service has been generated successfully and is ready to download.');
         await fetchFullCv();
+        showFormSuccess('🎉 Your service is ready. The full content is now unlocked for download.');
       } catch (err) {
         console.error('PayPal approval error:', err);
         showPaymentStatus(`PayPal approval failed: ${err.message || 'Please try again.'}`, true);

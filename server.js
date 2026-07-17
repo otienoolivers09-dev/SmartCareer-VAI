@@ -12,6 +12,7 @@ import path from "path";
 import admin from "firebase-admin";
 import payments from "./payments-firebase.js";
 import fs from 'fs';
+import { truncateToFirstWords } from './public/payment-utils.js';
 
 dotenv.config();
 
@@ -817,9 +818,8 @@ OUTPUT INSTRUCTIONS:
             return res.json({ success: true, cv: fullCv, hasPaid: true, cvId });
         }
 
-        // Calculate 25% preview by character count to preserve section structure
-        const previewCharCount = Math.floor(fullCv.length * 0.25);
-        const truncated = fullCv.substring(0, previewCharCount) + '\n\n[... Preview truncated. Unlock full CV with payment ...]';
+        // Return a short preview while keeping the structure readable.
+        const truncated = `${truncateToFirstWords(fullCv, 100)}\n\n[... Preview truncated. Unlock full CV with payment ...]`;
         
         return res.json({ 
             success: true, 
