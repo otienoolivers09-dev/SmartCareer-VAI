@@ -15,9 +15,9 @@ self.addEventListener('fetch', (event) => {
 
   const requestUrl = new URL(request.url);
   const sameOrigin = requestUrl.origin === self.location.origin;
+  const destination = request.destination || '';
 
-  if (!sameOrigin) {
-    event.respondWith(fetch(request));
+  if (!sameOrigin || destination === 'image' || destination === 'font' || destination === 'audio' || destination === 'video') {
     return;
   }
 

@@ -179,7 +179,7 @@ app.use((req, res, next) => {
     const nonce = res.locals.nonce;
     res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.paypal.com https://*.paypalobjects.com https://*.paypal.cn https://objects.paypal.cn https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://fonts.googleapis.com https://www.google.com https://www.googleadservices.com https://www.google-analytics.com https://*.doubleclick.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; connect-src 'self' https://www.gstatic.com https://www.googleapis.com https://api.smartcareervai.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://api-m.paypal.com https://api-m.sandbox.paypal.com https://www.paypal.com https://www.sandbox.paypal.com https://*.paypal.com https://*.paypalobjects.com https://*.paypal.cn https://objects.paypal.cn https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://hcaptcha.com https://*.hcaptcha.com https://browser-intake-us5-datadoghq.com https://*.qualtrics.com https://www.google.com https://www.googleadservices.com https://www.google-analytics.com https://*.doubleclick.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: https://images.unsplash.com https://*.paypal.com https://*.paypalobjects.com https://*.paypal.cn https://objects.paypal.cn https://www.google.com https://www.googleadservices.com https://www.google-analytics.com https://*.doubleclick.net; font-src 'self' data: https://fonts.gstatic.com; frame-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://*.paypal.com https://*.paypalobjects.com https://*.paypal.cn https://objects.paypal.cn https://www.google.com https://*.doubleclick.net https://smartlock.google.com https://*.qualtrics.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.paypal.com https://*.paypalobjects.com https://*.paypal.cn https://objects.paypal.cn https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://fonts.googleapis.com https://www.google.com https://www.googleadservices.com https://www.google-analytics.com https://*.doubleclick.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; connect-src 'self' https://images.unsplash.com https://www.gstatic.com https://www.googleapis.com https://api.smartcareervai.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://api-m.paypal.com https://api-m.sandbox.paypal.com https://www.paypal.com https://www.sandbox.paypal.com https://*.paypal.com https://*.paypalobjects.com https://*.paypal.cn https://objects.paypal.cn https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://hcaptcha.com https://*.hcaptcha.com https://browser-intake-us5-datadoghq.com https://*.qualtrics.com https://www.google.com https://www.googleadservices.com https://www.google-analytics.com https://*.doubleclick.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: https://images.unsplash.com https://*.paypal.com https://*.paypalobjects.com https://*.paypal.cn https://objects.paypal.cn https://www.google.com https://www.googleadservices.com https://www.google-analytics.com https://*.doubleclick.net; font-src 'self' data: https://fonts.gstatic.com; frame-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://*.paypal.com https://*.paypalobjects.com https://*.paypal.cn https://objects.paypal.cn https://www.google.com https://*.doubleclick.net https://smartlock.google.com https://*.qualtrics.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     );
     next();
 });
@@ -1319,7 +1319,7 @@ async function getMpesaAccessToken() {
     // Ensure required credentials exist
     if (!process.env.MPESA_CONSUMER_KEY || !process.env.MPESA_CONSUMER_SECRET) {
         console.warn('M-Pesa credentials missing (MPESA_CONSUMER_KEY/MPESA_CONSUMER_SECRET)');
-        throw new Error('M-Pesa not configured');
+        throw new Error('M-Pesa credentials are not configured on this server');
     }
 
     const auth = Buffer.from(`${process.env.MPESA_CONSUMER_KEY}:${process.env.MPESA_CONSUMER_SECRET}`).toString("base64");
@@ -1365,11 +1365,12 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
         try {
             accessToken = await getMpesaAccessToken();
         } catch (e) {
-            if (e && e.message && e.message.toLowerCase().includes('m-pesa not configured')) {
+            const message = e && e.message ? e.message : '';
+            if (message.toLowerCase().includes('m-pesa') || message.toLowerCase().includes('configured')) {
                 console.warn('M-Pesa configuration missing, rejecting request');
-                return res.status(503).json({ success: false, message: 'M-Pesa payments are not configured on this server' });
+                return res.status(503).json({ success: false, message: 'M-Pesa payments are not configured on this server. Add the Safaricom credentials and shortcode settings in the environment before enabling payments.' });
             }
-            console.error('M-Pesa Access Token Error:', e.message);
+            console.error('M-Pesa Access Token Error:', message);
             return res.status(502).json({ success: false, message: 'M-Pesa authentication failed. Please try again later.' });
         }
 
