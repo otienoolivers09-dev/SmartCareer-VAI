@@ -1935,7 +1935,8 @@ async function payWithMpesa() {
         cvId: latestCvId || null,
         cvType: getSelectedCvPlan(),
         plan: getSelectedCvPlan(),
-        description: 'Smart Career VAI Services'
+        description: 'Smart Career VAI Services',
+        transactionDesc: 'Smart Career VAI Services'
       })
     });
     const result = await response.json().catch(() => ({}));
