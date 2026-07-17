@@ -1,5 +1,6 @@
 import { login, registerUser, logout, onAuthStateChangedListener, getCurrentUser, getFirebaseToken } from './auth.js';
 import { apiUrl, fetchWithAuth, loadAppConfig, loadPayPalSdk, showPaymentStatus, normalizePhoneNumber, updateTotalAmount, downloadTextAsPdf } from './api.js?v=3';
+import { requireSignedInUser } from './auth-guard.js';
 import { truncateToFirstWords } from './payment-utils.js';
 
 /* ========================================
@@ -597,6 +598,19 @@ function collectUploadData() {
 }
 
 async function generateCVFromWizard() {
+  const authCheck = requireSignedInUser({
+    user: getCurrentUser(),
+    onMissing: () => {
+      showFormError('Please sign in to generate your CV.');
+      setAppVisibility(false);
+      showSignupForm('build');
+    }
+  });
+
+  if (!authCheck.ok) {
+    return;
+  }
+
   const payload = collectWizardData();
   if (!payload.fullName || !payload.email || !payload.careerGoal) {
     showFormError('Please complete the required fields before generating your CV.');
@@ -716,6 +730,19 @@ async function handleExtractProfile() {
 }
 
 async function generateFromUpload() {
+  const authCheck = requireSignedInUser({
+    user: getCurrentUser(),
+    onMissing: () => {
+      showFormError('Please sign in to generate your CV.');
+      setAppVisibility(false);
+      showSignupForm('upload');
+    }
+  });
+
+  if (!authCheck.ok) {
+    return;
+  }
+
   const payload = collectUploadData();
   if (!payload.existingCv) {
     showFormError('Please paste your CV text before generating.');

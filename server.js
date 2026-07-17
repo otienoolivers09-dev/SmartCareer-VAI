@@ -179,7 +179,7 @@ app.use((req, res, next) => {
     const nonce = res.locals.nonce;
     res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://www.paypal.com https://www.paypalobjects.com https://sb.paypal.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; connect-src 'self' https://www.gstatic.com https://api.smartcareervai.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://www.googleapis.com https://api-m.paypal.com https://api-m.sandbox.paypal.com https://www.paypal.com https://www.paypalobjects.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://images.unsplash.com https://www.paypalobjects.com https://www.paypal.com https://www.sandbox.paypal.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        "default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://www.paypal.com https://www.paypalobjects.com https://sb.paypal.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; connect-src 'self' https://www.gstatic.com https://api.smartcareervai.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://www.googleapis.com https://api-m.paypal.com https://api-m.sandbox.paypal.com https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://images.unsplash.com https://www.paypalobjects.com https://www.paypal.com https://www.sandbox.paypal.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     );
     next();
 });
@@ -239,7 +239,8 @@ const requiredOrigins = [
     'https://smartcareervai.com',
     'https://api.smartcareervai.com',
     'https://smartcareervai.onrender.com',
-    'https://*.vercel.app'
+    'https://*.vercel.app',
+    'https://*.onrender.com'
 ];
 requiredOrigins.forEach(origin => {
     if (!allowedOrigins.includes(origin)) {
@@ -820,6 +821,7 @@ OUTPUT INSTRUCTIONS:
 
         // Return a short preview while keeping the structure readable.
         const truncated = `${truncateToFirstWords(fullCv, 100)}\n\n[... Preview truncated. Unlock full CV with payment ...]`;
+        const previewCharacters = truncated.length;
         
         return res.json({ 
             success: true, 
@@ -827,7 +829,7 @@ OUTPUT INSTRUCTIONS:
             hasPaid: false, 
             cvId, 
             totalCharacters: fullCv.length,
-            previewCharacters: previewCharCount,
+            previewCharacters,
             message: 'Your CV has been generated! Unlock the full version with payment to download.'
         });
 
