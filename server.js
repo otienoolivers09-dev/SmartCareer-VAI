@@ -270,20 +270,35 @@ app.use(cors({
             callback(null, true);
             return;
         }
+
         const isAllowed = allowedOriginPatterns.some(pattern =>
             typeof pattern === 'string'
                 ? pattern === origin
                 : pattern.test(origin)
         );
+
         if (isAllowed) {
             callback(null, true);
-        } else {
-            callback(new Error(`CORS origin not allowed: ${origin}`));
+            return;
         }
+
+        try {
+            const hostname = new URL(origin).hostname;
+            const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(hostname);
+            if (isLocalHost) {
+                callback(null, true);
+                return;
+            }
+        } catch (e) {
+            // ignore malformed origins and fall through to the error below
+        }
+
+        callback(new Error(`CORS origin not allowed: ${origin}`));
     },
     credentials: true,
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'Accept', 'Origin', 'X-Requested-With'],
+    optionsSuccessStatus: 204
 }));
 
 // Request size limits
@@ -322,8 +337,29 @@ const paymentLimiter = rateLimit({
 });
 
 // Serve only public folder
-app.use(express.static(path.join(process.cwd(), 'public'), { dotfiles: 'ignore' }));
+const publicDir = path.join(process.cwd(), 'public');
+app.use(express.static(publicDir, { dotfiles: 'ignore' }));
 app.use('/admin', express.static(path.join(process.cwd(), 'admin'), { dotfiles: 'ignore' }));
+
+function sendPublicPage(res, fileName) {
+    const filePath = path.join(publicDir, fileName);
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            console.error(`Failed to serve static page ${fileName}:`, err.message);
+            res.status(err.statusCode || 500).send('Page not found');
+        }
+    });
+}
+
+app.get('/privacy', (req, res) => sendPublicPage(res, 'privacy.html'));
+app.get('/privacy.html', (req, res) => sendPublicPage(res, 'privacy.html'));
+app.get('/privacy-policy', (req, res) => sendPublicPage(res, 'privacy.html'));
+app.get('/terms', (req, res) => sendPublicPage(res, 'terms.html'));
+app.get('/terms.html', (req, res) => sendPublicPage(res, 'terms.html'));
+app.get('/terms-and-conditions', (req, res) => sendPublicPage(res, 'terms.html'));
+app.get('/refund', (req, res) => sendPublicPage(res, 'terms.html'));
+app.get('/refund.html', (req, res) => sendPublicPage(res, 'terms.html'));
+app.get('/refund-policy', (req, res) => sendPublicPage(res, 'terms.html'));
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
@@ -1349,10 +1385,10 @@ app.post("/generate-interview-tips", apiLimiter, verifyFirebaseToken, async (req
    MPESA LOGIC
 ========================= */
 function getMpesaCallbackPath() {
-    const rawPath = process.env.MPESA_CALLBACK_URL || '/webhook/mpesa';
+    const rawPath = process.env.MPESA_CALLBACK_URL || (isProduction ? 'https://api.smartcareervai.com/api/mpesa/callback' : '/api/mpesa/callback');
     try {
         const parsed = new URL(rawPath);
-        return parsed.pathname || '/webhook/mpesa';
+        return parsed.pathname || '/api/mpesa/callback';
     } catch (e) {
         return rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
     }
@@ -1408,7 +1444,7 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
 
         const shortcode = getMpesaEnv('MPESA_SHORTCODE');
         const passkey = getMpesaEnv('MPESA_PASSKEY');
-        const callbackUrl = getMpesaEnv('MPESA_CALLBACK_URL');
+        const callbackUrl = getMpesaEnv('MPESA_CALLBACK_URL') || (isProduction ? 'https://api.smartcareervai.com/api/mpesa/callback' : 'http://localhost:3000/api/mpesa/callback');
         const consumerKey = getMpesaEnv('MPESA_CONSUMER_KEY');
         const consumerSecret = getMpesaEnv('MPESA_CONSUMER_SECRET');
         const mpesaConfigured = Boolean(shortcode && passkey && callbackUrl && consumerKey && consumerSecret);
@@ -1787,6 +1823,10 @@ app.post('/webhook/paypal', async (req, res) => {
 });
 
 // MPESA webhook receiver (STK Push callback)
+app.get(mpesaCallbackPath, (req, res) => {
+    res.status(200).json({ success: true, message: 'M-Pesa callback endpoint is ready.' });
+});
+
 app.post(mpesaCallbackPath, async (req, res) => {
     try {
         const body = req.body;

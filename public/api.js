@@ -8,9 +8,9 @@ let API_BASE_URL = (() => {
    const host = window.location.hostname;
    const isLocal = host === 'localhost' || host === '127.0.0.1' || window.location.protocol === 'file:';
    
-   // DEFAULT to localhost:3000 when running locally
+   // Prefer the current origin when the app and API are served from the same local server.
    if (isLocal) {
-      return 'http://localhost:3000';
+      return window.location.origin || 'http://localhost:3000';
    }
 
    // Map the public frontend hosts to the API backend when the API is served on a separate host.
@@ -41,7 +41,7 @@ function isLocalHost() {
 
 function getLocalApiCandidates() {
    const hosts = ['http://localhost', 'http://127.0.0.1'];
-   const ports = [3000, 3001, 3002];
+   const ports = [3000, 3001, 3002, 3003, 3004, 3005];
    const candidates = [];
 
    hosts.forEach(host => {
@@ -54,11 +54,12 @@ function getLocalApiCandidates() {
 }
 
 function normalizeBaseUrl(url) {
-   return url.replace(/\/+$/, '');
+   return (url || '').replace(/\/+$/, '');
 }
 
 export function apiUrl(path) {
-   return API_BASE_URL ? `${normalizeBaseUrl(API_BASE_URL)}${path}` : path;
+   const base = normalizeBaseUrl(API_BASE_URL || window.location.origin || 'http://localhost:3000');
+   return base ? `${base}${path}` : path;
 }
 
 async function tryLoadConfig(baseUrl) {
@@ -79,12 +80,18 @@ export async function fetchWithAuth(url, options = {}) {
       ...options.headers
    };
    if (token) headers.Authorization = `Bearer ${token}`;
-   return fetch(apiUrl(url), { ...options, headers });
+   const targetUrl = apiUrl(url);
+   console.log('API request ->', targetUrl);
+   return fetch(targetUrl, { ...options, headers });
 }
 
 export async function loadAppConfig() {
    const baseUrls = [];
    if (isLocalHost()) {
+      const currentOrigin = window.location.origin;
+      if (currentOrigin && !baseUrls.includes(currentOrigin)) {
+         baseUrls.push(currentOrigin);
+      }
       getLocalApiCandidates().forEach(candidate => {
          if (!baseUrls.includes(candidate)) {
             baseUrls.push(candidate);
