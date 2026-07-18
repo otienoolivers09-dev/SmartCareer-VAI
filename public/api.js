@@ -13,8 +13,9 @@ let API_BASE_URL = (() => {
       return 'http://localhost:3000';
    }
 
-   // Map static frontend hosts to the API backend when the API is served on a separate host.
+   // Map the public frontend hosts to the API backend when the API is served on a separate host.
    const apiHostMap = {
+      'smart-career-vai.vercel.app': 'https://api.smartcareervai.com',
       'www.smartcareervai.com': 'https://api.smartcareervai.com',
       'smartcareervai.com': 'https://api.smartcareervai.com'
    };
@@ -30,12 +31,26 @@ let API_BASE_URL = (() => {
    if (backendHosts.includes(host)) {
       return window.location.origin;
    }
-   return 'https://smartcareer-vai.onrender.com';
+   return 'https://api.smartcareervai.com';
 })();
 
 function isLocalHost() {
    const host = window.location.hostname;
    return host === 'localhost' || host === '127.0.0.1' || window.location.protocol === 'file:';
+}
+
+function getLocalApiCandidates() {
+   const hosts = ['http://localhost', 'http://127.0.0.1'];
+   const ports = [3000, 3001, 3002];
+   const candidates = [];
+
+   hosts.forEach(host => {
+      ports.forEach(port => {
+         candidates.push(`${host}:${port}`);
+      });
+   });
+
+   return candidates;
 }
 
 function normalizeBaseUrl(url) {
@@ -68,15 +83,16 @@ export async function fetchWithAuth(url, options = {}) {
 }
 
 export async function loadAppConfig() {
-   const baseUrls = [API_BASE_URL];
-   if (isLocalHost() && window.__TRY_LOCAL_API) {
-      const localHost = 'http://127.0.0.1';
-      LOCAL_API_PORTS.forEach(port => {
-         const candidate = `${localHost}:${port}`;
+   const baseUrls = [];
+   if (isLocalHost()) {
+      getLocalApiCandidates().forEach(candidate => {
          if (!baseUrls.includes(candidate)) {
             baseUrls.push(candidate);
          }
       });
+   }
+   if (API_BASE_URL && !baseUrls.includes(API_BASE_URL)) {
+      baseUrls.push(API_BASE_URL);
    }
 
    for (const baseUrl of baseUrls) {
