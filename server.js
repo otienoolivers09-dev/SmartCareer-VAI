@@ -28,6 +28,14 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
+process.on('unhandledRejection', (err) => {
+    console.error('UNHANDLED REJECTION:', err);
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('UNCAUGHT EXCEPTION:', err);
+});
+
 /* =========================
    FIREBASE ADMIN INITIALIZATION
 ========================= */
@@ -1522,39 +1530,44 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
 
         const baseUrl = getMpesaEnv('MPESA_ENV') === 'production' ? 'https://api.safaricom.co.ke' : 'https://sandbox.safaricom.co.ke';
 
+        const payload = {
+            BusinessShortCode: shortcode,
+            Password: password,
+            Timestamp: timestamp,
+            TransactionType: "CustomerPayBillOnline",
+            Amount: Math.round(value.amount),
+            PartyA: value.phone,
+            PartyB: shortcode,
+            PhoneNumber: value.phone,
+            CallBackURL: callbackUrl,
+            AccountReference: "SmartCVAI",
+            TransactionDesc: transactionDesc
+        };
+
         let response;
         try {
+            console.log('Sending STK Push payload', payload);
             console.log('Calling Safaricom STK Push endpoint', { baseUrl, endpoint: `${baseUrl}/mpesa/stkpush/v1/processrequest` });
-            response = await axios.post(`${baseUrl}/mpesa/stkpush/v1/processrequest`, {
-                BusinessShortCode: shortcode,
-                Password: password,
-                Timestamp: timestamp,
-                TransactionType: "CustomerPayBillOnline",
-                Amount: Math.round(value.amount),
-                PartyA: value.phone,
-                PartyB: shortcode,
-                PhoneNumber: value.phone,
-                CallBackURL: callbackUrl,
-                AccountReference: "SmartCVAI",
-                TransactionDesc: transactionDesc
-            }, {
+            response = await axios.post(`${baseUrl}/mpesa/stkpush/v1/processrequest`, payload, {
                 headers: { Authorization: `Bearer ${accessToken}` },
-                timeout: 10000
+                timeout: 30000
             });
-        } catch (axiosErr) {
-            console.error('M-Pesa STK Push API Error:', {
-                message: axiosErr?.message,
-                status: axiosErr?.response?.status,
-                data: axiosErr?.response?.data,
-                code: axiosErr?.code
+            console.log('STK PUSH SUCCESS', response.data);
+        } catch (error) {
+            console.error('STK PUSH ERROR', error.response?.data || error.message);
+            console.error('STK PUSH ERROR DETAILS', {
+                message: error?.message,
+                status: error?.response?.status,
+                data: error?.response?.data,
+                code: error?.code
             });
-            const statusCode = axiosErr.response?.status || 502;
-            const errorMsg = axiosErr.response?.data?.errorMessage || 'M-Pesa service error';
+            const statusCode = error.response?.status || 502;
+            const errorMsg = error.response?.data?.errorMessage || 'M-Pesa service error';
             return res.status(statusCode).json({
                 success: false,
                 message: `M-Pesa Error: ${errorMsg}`,
-                error: axiosErr?.message,
-                details: axiosErr?.response?.data || null
+                error: error?.message,
+                details: error?.response?.data || null
             });
         }
 
@@ -1563,8 +1576,8 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
             return res.status(502).json({ success: false, message: 'Invalid response from M-Pesa' });
         }
 
-        const payload = response.data;
-        const isSuccess = payload.CheckoutRequestID || payload.MerchantRequestID;
+        const stkPayload = response.data;
+        const isSuccess = stkPayload.CheckoutRequestID || stkPayload.MerchantRequestID;
 
         if (!isSuccess) {
             console.error('M-Pesa returned error response:', payload);
