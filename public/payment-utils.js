@@ -33,3 +33,22 @@ export function getCoverLetterPreviewText(text, isUnlocked = false) {
 
   return `${preview}…\n\nUnlock to view the full cover letter and download it.`;
 }
+
+export function getMpesaPaymentState(result) {
+  const data = result?.data || {};
+  const checkoutId = data.CheckoutRequestID || data.MerchantRequestID || null;
+
+  if (result?.success && checkoutId) {
+    return {
+      status: 'pending',
+      orderId: checkoutId,
+      message: 'M-Pesa STK prompt sent. Please approve the payment on your phone to unlock your content.'
+    };
+  }
+
+  return {
+    status: 'failed',
+    orderId: null,
+    message: result?.message || 'M-Pesa payment could not be started.'
+  };
+}

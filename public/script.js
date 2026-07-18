@@ -1,7 +1,7 @@
 import { login, registerUser, logout, onAuthStateChangedListener, getCurrentUser, getFirebaseToken } from './auth.js';
 import { apiUrl, fetchWithAuth, loadAppConfig, loadPayPalSdk, showPaymentStatus, normalizePhoneNumber, updateTotalAmount, downloadTextAsPdf } from './api.js?v=3';
 import { requireSignedInUser } from './auth-guard.js';
-import { getCoverLetterPreviewText, truncateToFirstWords } from './payment-utils.js';
+import { getCoverLetterPreviewText, truncateToFirstWords, getMpesaPaymentState } from './payment-utils.js';
 
 /* ========================================
    SMART CAREER VAI - ENHANCED SCRIPT v3
@@ -16,6 +16,9 @@ let hasPaid = false;
 let isSignupMode = false;
 let currentWizardStep = 1;
 let pendingAuthAction = null; // 'upload' | 'build' | null - preserved across auth flow
+let mpesaVerificationTimer = null;
+let mpesaVerificationAttempts = 0;
+let activeMpesaOrderId = null;
 
 const assistantResults = {
   currentTab: 'cv',
@@ -1880,6 +1883,62 @@ function attachCvPlan(payload) {
   return { ...payload, cvType: getSelectedCvPlan() };
 }
 
+function clearMpesaVerificationPolling() {
+  if (mpesaVerificationTimer) {
+    clearInterval(mpesaVerificationTimer);
+    mpesaVerificationTimer = null;
+  }
+  mpesaVerificationAttempts = 0;
+  activeMpesaOrderId = null;
+}
+
+async function startMpesaVerificationPolling(orderId) {
+  if (!orderId) return;
+
+  clearMpesaVerificationPolling();
+  activeMpesaOrderId = orderId;
+  mpesaVerificationAttempts = 0;
+
+  const poll = async () => {
+    try {
+      const response = await fetchWithAuth('/verify-payment', {
+        method: 'POST',
+        body: JSON.stringify({ orderId })
+      });
+      const data = await response.json().catch(() => null);
+      if (response.ok && data?.verified) {
+        clearMpesaVerificationPolling();
+        hasPaid = true;
+        updateDownloadButtons();
+        setActiveResultsTab(assistantResults.currentTab || 'cv');
+        showPaymentStatus('Payment confirmed. Your premium service is now ready. The full CV and download buttons are unlocked.', 'success');
+        showSuccessToast('Payment confirmed. Your service has been generated successfully and is ready to download.');
+        await fetchFullCv();
+        showFormSuccess('🎉 Your service is ready. The full content is now unlocked for download.');
+        return;
+      }
+
+      mpesaVerificationAttempts += 1;
+      if (mpesaVerificationAttempts >= 24) {
+        clearMpesaVerificationPolling();
+        showPaymentStatus('Still waiting for M-Pesa confirmation. Please approve the prompt on your phone and wait a moment, then try again if needed.', 'info');
+      }
+    } catch (err) {
+      console.warn('M-Pesa verification check failed:', err);
+      mpesaVerificationAttempts += 1;
+      if (mpesaVerificationAttempts >= 24) {
+        clearMpesaVerificationPolling();
+        showPaymentStatus('Still waiting for M-Pesa confirmation. Please approve the prompt on your phone and wait a moment, then try again if needed.', 'info');
+      }
+    }
+  };
+
+  await poll();
+  mpesaVerificationTimer = setInterval(() => {
+    poll().catch(() => {});
+  }, 5000);
+}
+
 // ========== PAYMENT ==========
 
 function setupPaymentListeners() {
@@ -1956,6 +2015,16 @@ async function payWithMpesa() {
     const result = await response.json().catch(() => ({}));
 
     if (response.ok && result.success !== false) {
+      const paymentState = getMpesaPaymentState(result);
+      if (paymentState.status === 'pending') {
+        updateDownloadButtons();
+        setActiveResultsTab(assistantResults.currentTab || 'cv');
+        showPaymentStatus(paymentState.message, 'info');
+        showInfoToast('M-Pesa prompt sent. Please approve the payment on your phone to unlock the content.');
+        await startMpesaVerificationPolling(paymentState.orderId);
+        return;
+      }
+
       hasPaid = true;
       updateDownloadButtons();
       setActiveResultsTab(assistantResults.currentTab || 'cv');
