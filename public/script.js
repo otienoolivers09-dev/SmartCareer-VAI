@@ -2020,7 +2020,7 @@ async function payWithMpesa() {
         updateDownloadButtons();
         setActiveResultsTab(assistantResults.currentTab || 'cv');
         showPaymentStatus(paymentState.message, 'info');
-        showInfoToast('M-Pesa prompt sent. Please approve the payment on your phone to unlock the content.');
+        showInfoToast('M-Pesa request submitted. Please approve the prompt on your phone if it appears. If it does not, the request may not have reached Safaricom yet.');
         await startMpesaVerificationPolling(paymentState.orderId);
         return;
       }

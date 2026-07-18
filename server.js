@@ -202,7 +202,7 @@ app.use(helmet.hsts({
 app.use(helmet.referrerPolicy({ policy: 'strict-origin-when-cross-origin' }));
 
 // Enable proxy trust so forwarded proto works behind Render/other proxies.
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 // HTTPS redirect in production, but do not force HTTPS for local development.
 if (isProduction) {
@@ -1460,6 +1460,16 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
         const consumerKey = getMpesaEnv('MPESA_CONSUMER_KEY');
         const consumerSecret = getMpesaEnv('MPESA_CONSUMER_SECRET');
         const mpesaConfigured = Boolean(shortcode && passkey && callbackUrl && consumerKey && consumerSecret);
+
+        console.log('M-Pesa payment request', {
+            mpesaConfigured,
+            shortcodePresent: Boolean(shortcode),
+            passkeyPresent: Boolean(passkey),
+            callbackPresent: Boolean(callbackUrl),
+            consumerKeyPresent: Boolean(consumerKey),
+            consumerSecretPresent: Boolean(consumerSecret),
+            env: getMpesaEnv('MPESA_ENV') || 'sandbox'
+        });
 
         if (!mpesaConfigured) {
             const status = getMpesaConfigStatus();
