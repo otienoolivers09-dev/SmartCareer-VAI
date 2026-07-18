@@ -371,7 +371,19 @@ function getEnvString(name) {
 }
 
 function getMpesaEnv(name) {
-    return getEnvString(name);
+    const candidates = [name];
+    if (name === 'MPESA_SHORTCODE') {
+        candidates.push('PESA_SHORTCODEM');
+    }
+
+    for (const candidate of candidates) {
+        const value = getEnvString(candidate);
+        if (value) {
+            return value;
+        }
+    }
+
+    return '';
 }
 
 function isPayPalConfigured() {
@@ -391,11 +403,11 @@ function isMpesaConfigured() {
 
 function getMpesaConfigStatus() {
     const missing = [];
-    if (!getEnvString('MPESA_CONSUMER_KEY')) missing.push('MPESA_CONSUMER_KEY');
-    if (!getEnvString('MPESA_CONSUMER_SECRET')) missing.push('MPESA_CONSUMER_SECRET');
-    if (!getEnvString('MPESA_SHORTCODE')) missing.push('MPESA_SHORTCODE');
-    if (!getEnvString('MPESA_PASSKEY')) missing.push('MPESA_PASSKEY');
-    if (!getEnvString('MPESA_CALLBACK_URL')) missing.push('MPESA_CALLBACK_URL');
+    if (!getMpesaEnv('MPESA_CONSUMER_KEY')) missing.push('MPESA_CONSUMER_KEY');
+    if (!getMpesaEnv('MPESA_CONSUMER_SECRET')) missing.push('MPESA_CONSUMER_SECRET');
+    if (!getMpesaEnv('MPESA_SHORTCODE')) missing.push('MPESA_SHORTCODE');
+    if (!getMpesaEnv('MPESA_PASSKEY')) missing.push('MPESA_PASSKEY');
+    if (!getMpesaEnv('MPESA_CALLBACK_URL')) missing.push('MPESA_CALLBACK_URL');
     return { configured: missing.length === 0, missing };
 }
 
@@ -1450,34 +1462,13 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
         const mpesaConfigured = Boolean(shortcode && passkey && callbackUrl && consumerKey && consumerSecret);
 
         if (!mpesaConfigured) {
-            const mockPayload = {
-                success: true,
-                CheckoutRequestID: `mock_${Date.now()}`,
-                MerchantRequestID: `mock_${Date.now()}`,
-                ResponseCode: '0',
-                ResponseDescription: 'Mock payment initiated successfully. Connect real Safaricom credentials to enable live STK Push.'
-            };
-
-            try {
-                await payments.createPayment({
-                    order_id: mockPayload.CheckoutRequestID,
-                    cv_id: value.cvId || null,
-                    method: 'mpesa',
-                    user_id: userId || value.phone,
-                    amount: value.amount,
-                    currency: 'KES',
-                    status: 'PENDING',
-                    raw: mockPayload,
-                    plan: value.plan || value.cvType || null,
-                    cv_type: value.cvType || value.plan || null,
-                    max_uses: value.maxUses || 1
-                });
-            } catch (e) {
-                console.warn('Mock M-Pesa payment persistence failed:', e.message);
-            }
-
-            console.warn('M-Pesa credentials missing. Returning a demo success payload so the UI can complete the payment flow.');
-            return res.json({ success: true, data: mockPayload, mock: true });
+            const status = getMpesaConfigStatus();
+            console.error('M-Pesa payment initiation blocked: missing configuration', status.missing);
+            return res.status(503).json({
+                success: false,
+                message: 'M-Pesa payments are not configured on this server. Configure the Safaricom credentials and callback URL before enabling STK Push.',
+                missing: status.missing
+            });
         }
 
         let accessToken;
