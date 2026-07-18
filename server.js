@@ -1420,13 +1420,20 @@ async function getMpesaAccessToken() {
     const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
     try {
         const baseUrl = getMpesaEnv('MPESA_ENV') === 'production' ? 'https://api.safaricom.co.ke' : 'https://sandbox.safaricom.co.ke';
+        console.log('Requesting M-Pesa access token', { baseUrl, consumerKeyPresent: Boolean(consumerKey), consumerSecretPresent: Boolean(consumerSecret) });
         const response = await axios.get(`${baseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
             headers: { Authorization: `Basic ${auth}` },
             timeout: 10000
         });
+        console.log('M-Pesa access token response received', { status: response?.status, hasData: Boolean(response?.data) });
         return response.data.access_token;
     } catch (err) {
-        console.error('M-Pesa token fetch error:', err.message);
+        console.error('M-Pesa token fetch error:', {
+            message: err?.message,
+            status: err?.response?.status,
+            data: err?.response?.data,
+            code: err?.code
+        });
         throw new Error('Failed to get M-Pesa access token');
     }
 }
@@ -1471,13 +1478,28 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
             env: getMpesaEnv('MPESA_ENV') || 'sandbox'
         });
 
+        console.log('Starting M-Pesa STK Push flow', {
+            amount: value.amount,
+            phone: value.phone,
+            callbackUrl,
+            shortcode,
+            env: getMpesaEnv('MPESA_ENV') || 'sandbox'
+        });
+
         if (!mpesaConfigured) {
             const status = getMpesaConfigStatus();
             console.error('M-Pesa payment initiation blocked: missing configuration', status.missing);
             return res.status(503).json({
                 success: false,
                 message: 'M-Pesa payments are not configured on this server. Configure the Safaricom credentials and callback URL before enabling STK Push.',
-                missing: status.missing
+                missing: status.missing,
+                debug: {
+                    shortcodePresent: Boolean(shortcode),
+                    passkeyPresent: Boolean(passkey),
+                    callbackPresent: Boolean(callbackUrl),
+                    consumerKeyPresent: Boolean(consumerKey),
+                    consumerSecretPresent: Boolean(consumerSecret)
+                }
             });
         }
 
@@ -1491,7 +1513,7 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
                 return res.status(503).json({ success: false, message: 'M-Pesa payments are not configured on this server. Add the Safaricom credentials and shortcode settings in the environment before enabling payments.' });
             }
             console.error('M-Pesa Access Token Error:', message);
-            return res.status(502).json({ success: false, message: 'M-Pesa authentication failed. Please try again later.' });
+            return res.status(502).json({ success: false, message: 'M-Pesa authentication failed. Please try again later.', error: message });
         }
 
         const timestamp = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14);
@@ -1502,6 +1524,7 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
 
         let response;
         try {
+            console.log('Calling Safaricom STK Push endpoint', { baseUrl, endpoint: `${baseUrl}/mpesa/stkpush/v1/processrequest` });
             response = await axios.post(`${baseUrl}/mpesa/stkpush/v1/processrequest`, {
                 BusinessShortCode: shortcode,
                 Password: password,
@@ -1519,10 +1542,20 @@ app.post("/pay-premium", paymentLimiter, async (req, res) => {
                 timeout: 10000
             });
         } catch (axiosErr) {
-            console.error('M-Pesa STK Push API Error:', axiosErr.message);
+            console.error('M-Pesa STK Push API Error:', {
+                message: axiosErr?.message,
+                status: axiosErr?.response?.status,
+                data: axiosErr?.response?.data,
+                code: axiosErr?.code
+            });
             const statusCode = axiosErr.response?.status || 502;
             const errorMsg = axiosErr.response?.data?.errorMessage || 'M-Pesa service error';
-            return res.status(statusCode).json({ success: false, message: `M-Pesa Error: ${errorMsg}` });
+            return res.status(statusCode).json({
+                success: false,
+                message: `M-Pesa Error: ${errorMsg}`,
+                error: axiosErr?.message,
+                details: axiosErr?.response?.data || null
+            });
         }
 
         if (!response.data) {
