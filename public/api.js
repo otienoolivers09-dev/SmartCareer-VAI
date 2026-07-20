@@ -17,15 +17,15 @@ let API_BASE_URL = (() => {
    const apiHostMap = {
       'smart-career-vai.vercel.app': 'https://api.smartcareervai.com',
       'www.smartcareervai.com': 'https://api.smartcareervai.com',
-      'smartcareervai.com': 'https://api.smartcareervai.com'
+      'smartcareervai.com': 'https://api.smartcareervai.com',
+      'smartcareer-vai.onrender.com': 'https://api.smartcareervai.com',
+      'smartcareervai.onrender.com': 'https://api.smartcareervai.com'
    };
    if (apiHostMap[host]) {
       return apiHostMap[host];
    }
 
    const backendHosts = [
-      'smartcareer-vai.onrender.com',
-      'smartcareervai.onrender.com',
       'api.smartcareervai.com'
    ];
    if (backendHosts.includes(host)) {
