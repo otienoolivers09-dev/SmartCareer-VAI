@@ -13,13 +13,13 @@ let API_BASE_URL = (() => {
       return window.location.origin || 'http://localhost:3000';
    }
 
-   // Map the public frontend hosts to the API backend when the API is served on a separate host.
+   // Prefer the current origin for deployed frontend hosts so requests do not fail on an unreachable API hostname.
    const apiHostMap = {
-      'smart-career-vai.vercel.app': 'https://api.smartcareervai.com',
-      'www.smartcareervai.com': 'https://api.smartcareervai.com',
-      'smartcareervai.com': 'https://api.smartcareervai.com',
-      'smartcareer-vai.onrender.com': 'https://api.smartcareervai.com',
-      'smartcareervai.onrender.com': 'https://api.smartcareervai.com'
+      'smart-career-vai.vercel.app': window.location.origin,
+      'www.smartcareervai.com': window.location.origin,
+      'smartcareervai.com': window.location.origin,
+      'smartcareer-vai.onrender.com': window.location.origin,
+      'smartcareervai.onrender.com': window.location.origin
    };
    if (apiHostMap[host]) {
       return apiHostMap[host];
@@ -31,7 +31,7 @@ let API_BASE_URL = (() => {
    if (backendHosts.includes(host)) {
       return window.location.origin;
    }
-   return 'https://api.smartcareervai.com';
+   return window.location.origin || 'https://api.smartcareervai.com';
 })();
 
 function isLocalHost() {
