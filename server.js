@@ -15,6 +15,8 @@ import fs from 'fs';
 import { truncateToFirstWords } from './public/payment-utils.js';
 import {
     resolveGenerationContext,
+    buildProfessionalCvText,
+    buildProfessionalCoverLetter,
     buildFallbackCoverLetter,
     buildFallbackLinkedInSummary,
     buildFallbackCareerRoadmap,
@@ -22,6 +24,7 @@ import {
     buildFallbackHealthAnalysis,
     buildFallbackSkillsAnalysis
 } from './server/ai-fallbacks.js';
+import { canAccessFullContent } from './server/access-control.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -878,7 +881,22 @@ OUTPUT INSTRUCTIONS:
             // ignore logging errors
         }
 
-        const fullCv = completion.choices[0].message.content || "";
+        let fullCv = completion.choices[0].message.content || "";
+        if (!String(fullCv).trim()) {
+            fullCv = buildProfessionalCvText({
+                cvType,
+                fullName: value.fullName || value.name || 'Candidate',
+                email: value.email || 'your.email@example.com',
+                phone: value.phone || '+254700000000',
+                city: value.city || 'City',
+                country: value.country || 'Country',
+                summary: value.summary || value.careerGoal || 'Results-driven professional with a strong track record of delivering measurable impact and continuous improvement.',
+                skills: Array.isArray(value.skills) ? value.skills : (typeof value.skills === 'string' ? value.skills.split(',').map(item => item.trim()).filter(Boolean) : []),
+                experience: Array.isArray(value.experience) ? value.experience : [],
+                education: Array.isArray(value.education) ? value.education : [],
+                certifications: Array.isArray(value.certifications) ? value.certifications : []
+            });
+        }
         const cvId = `cv_${Date.now()}`;
 
         // Persist the generated CV server-side (so full content can be unlocked after payment)
@@ -1200,29 +1218,32 @@ app.get('/cv/full/:cvId', apiLimiter, async (req, res) => {
         const authHeader = req.headers.authorization;
         const ip = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
+        let tokenRecord = null;
+        let paymentRecord = null;
+
         // First, try token-based access
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.substring(7).trim();
             try {
-                const tokRec = await payments.getTokenRecord(token);
-                if (tokRec && tokRec.cv_id === cvId) {
+                tokenRecord = await payments.getTokenRecord(token);
+                if (tokenRecord && tokenRecord.cv_id === cvId) {
                     const now = new Date();
-                    if (tokRec.used) {
-                        await payments.logAccess({ cv_id: cvId, user_id: tokRec.user_id, token, ip, success: false, reason: 'token_used' });
+                    if (tokenRecord.used) {
+                        await payments.logAccess({ cv_id: cvId, user_id: tokenRecord.user_id, token, ip, success: false, reason: 'token_used' });
                         return res.status(403).json({ success: false, message: 'Token already used' });
                     }
-                    if (tokRec.expires_at && new Date(tokRec.expires_at) < now) {
-                        await payments.logAccess({ cv_id: cvId, user_id: tokRec.user_id, token, ip, success: false, reason: 'token_expired' });
+                    if (tokenRecord.expires_at && new Date(tokenRecord.expires_at) < now) {
+                        await payments.logAccess({ cv_id: cvId, user_id: tokenRecord.user_id, token, ip, success: false, reason: 'token_expired' });
                         return res.status(403).json({ success: false, message: 'Token expired' });
                     }
                     try {
                         const newCount = await payments.incrementTokenUsage(token);
-                        await payments.logAccess({ cv_id: cvId, user_id: tokRec.user_id, token, ip, success: true });
-                        return res.json({ success: true, cv: record.content, usageCount: newCount, maxUses: tokRec.max_uses || 1 });
+                        await payments.logAccess({ cv_id: cvId, user_id: tokenRecord.user_id, token, ip, success: true });
+                        return res.json({ success: true, cv: record.content, usageCount: newCount, maxUses: tokenRecord.max_uses || 1 });
                     } catch (usageErr) {
                         const msg = usageErr.message || 'Token usage error';
                         const reason = msg === 'Token expired' ? 'token_expired' : (msg === 'Token usage limit reached' ? 'token_limit' : 'token_error');
-                        await payments.logAccess({ cv_id: cvId, user_id: tokRec.user_id, token, ip, success: false, reason });
+                        await payments.logAccess({ cv_id: cvId, user_id: tokenRecord.user_id, token, ip, success: false, reason });
                         return res.status(403).json({ success: false, message: msg });
                     }
                 }
@@ -1238,8 +1259,8 @@ app.get('/cv/full/:cvId', apiLimiter, async (req, res) => {
         try {
             const userId = await getFirebaseUid(req);
             const userPayments = await payments.listPayments({ limit: 1, user_id: userId, cv_id: cvId });
-            const hasValidPayment = userPayments && userPayments.length > 0 && (userPayments[0].status === 'COMPLETED' || userPayments[0].status === 'PAID');
-            if (!hasValidPayment) {
+            paymentRecord = userPayments && userPayments.length > 0 ? userPayments[0] : null;
+            if (!canAccessFullContent({ paymentRecord, tokenRecord })) {
                 await payments.logAccess({ cv_id: cvId, user_id: userId, token: null, ip, success: false, reason: 'no_payment' });
                 return res.status(403).json({ success: false, message: 'Payment required for this CV' });
             }
@@ -1264,7 +1285,7 @@ app.post("/generate-cover-letter", apiLimiter, verifyFirebaseToken, async (req, 
         return res.status(503).json({ success: false, message: 'OpenAI API key is not configured' });
     }
     try {
-        const { fullName, name, jobTarget, careerGoal, targetRole, skills, summary, experience, cv } = req.body || {};
+        const { fullName, name, jobTarget, careerGoal, targetRole, skills, summary, experience, cv, companyName, companyAddress, company } = req.body || {};
         const resolvedName = fullName || name || 'Candidate';
         const resolvedTarget = jobTarget || careerGoal || targetRole;
         if (!resolvedTarget) {
@@ -1285,9 +1306,26 @@ app.post("/generate-cover-letter", apiLimiter, verifyFirebaseToken, async (req, 
             coverLetter = completion.choices[0].message.content;
         } catch (error) {
             console.warn('Using fallback cover letter generation:', error.message);
-            coverLetter = buildFallbackCoverLetter(context);
+            coverLetter = buildProfessionalCoverLetter({
+                fullName: context.fullName,
+                companyName: companyName || company || 'Hiring Organization',
+                companyAddress: companyAddress || '',
+                jobTitle: context.jobTarget,
+                skills: context.skills,
+                summary: context.summary || `I am excited to apply for the ${context.jobTarget} role. I bring a strong mix of professionalism, adaptability, and a results-focused mindset that allows me to contribute quickly and add value from day one.`
+            });
         }
-        res.json({ success: true, coverLetter });
+        if (!String(coverLetter).trim()) {
+            coverLetter = buildProfessionalCoverLetter({
+                fullName: context.fullName,
+                companyName: companyName || company || 'Hiring Organization',
+                companyAddress: companyAddress || '',
+                jobTitle: context.jobTarget,
+                skills: context.skills,
+                summary: context.summary || `I am excited to apply for the ${context.jobTarget} role. I bring a strong mix of professionalism, adaptability, and a results-focused mindset that allows me to contribute quickly and add value from day one.`
+            });
+        }
+        res.json({ success: true, coverLetter: String(coverLetter || '').trim() });
     } catch (error) {
         console.error("Cover Letter Generation Error:", error.message);
         res.status(500).json({ success: false, message: "Cover letter generation failed" });

@@ -32,11 +32,110 @@ function resolveGenerationContext(payload = {}) {
   };
 }
 
+function buildProfessionalCvText(payload = {}) {
+  const cvType = String(payload.cvType || 'standard').toLowerCase();
+  const isInternational = cvType.includes('international');
+  const fullName = payload.fullName || 'YOUR FULL NAME';
+  const email = payload.email || 'your.email@example.com';
+  const phone = payload.phone || '+254700000000';
+  const city = payload.city || 'City';
+  const country = payload.country || 'Country';
+  const summary = payload.summary || 'Results-driven professional with a strong track record of delivering measurable impact and continuous improvement.';
+  const skills = Array.isArray(payload.skills) && payload.skills.length
+    ? payload.skills
+    : ['Communication', 'Leadership', 'Problem Solving'];
+  const experience = Array.isArray(payload.experience) && payload.experience.length
+    ? payload.experience
+    : [{ title: 'Professional Role', company: 'Organization', location: city, period: 'YYYY - Present', details: ['Delivered high-quality work with measurable impact.', 'Collaborated effectively with colleagues and stakeholders.'] }];
+  const education = Array.isArray(payload.education) && payload.education.length
+    ? payload.education
+    : [{ school: 'University Name', degree: 'Degree / Field', period: 'YYYY - YYYY' }];
+  const certifications = Array.isArray(payload.certifications) && payload.certifications.length
+    ? payload.certifications
+    : [{ name: 'Professional Certificate', issuer: 'Issuing Institution', year: 'YYYY' }];
+
+  const lines = [];
+  lines.push(fullName);
+  lines.push(`${email} | ${phone} | ${city}, ${country}`);
+  lines.push('');
+  lines.push('=======================================');
+  lines.push('PROFESSIONAL SUMMARY');
+  lines.push('=======================================');
+  lines.push(summary);
+  lines.push('');
+  lines.push('=======================================');
+  lines.push('CORE COMPETENCIES');
+  lines.push('=======================================');
+  skills.forEach(skill => lines.push(`- ${skill}`));
+  lines.push('');
+  lines.push('=======================================');
+  lines.push('PROFESSIONAL EXPERIENCE');
+  lines.push('=======================================');
+  experience.forEach((item) => {
+    const title = item.title || 'Role';
+    const company = item.company || 'Organization';
+    const location = item.location || city;
+    const period = item.period || 'YYYY - Present';
+    const details = Array.isArray(item.details) && item.details.length ? item.details : ['Delivered measurable results and supported team objectives.'];
+    lines.push(`${company} | ${title} | ${location} | ${period}`);
+    details.forEach(detail => lines.push(`- ${detail}`));
+    lines.push('');
+  });
+  lines.push('=======================================');
+  lines.push('EDUCATION');
+  lines.push('=======================================');
+  education.forEach((item) => {
+    const school = item.school || 'School Name';
+    const degree = item.degree || 'Degree / Field';
+    const period = item.period || 'YYYY - YYYY';
+    lines.push(`${school} | ${degree} | ${period}`);
+  });
+  lines.push('');
+  lines.push('=======================================');
+  lines.push('CERTIFICATIONS');
+  lines.push('=======================================');
+  certifications.forEach((item) => {
+    const name = item.name || 'Certification';
+    const issuer = item.issuer || 'Issuer';
+    const year = item.year || 'YYYY';
+    lines.push(`${name} | ${issuer} | ${year}`);
+  });
+  lines.push('');
+  if (isInternational) {
+    lines.push('LANGUAGES');
+    lines.push('English | Fluent');
+    lines.push('');
+  }
+  lines.push('REFERENCES AVAILABLE UPON REQUEST');
+  return lines.join('\n').trim();
+}
+
+function buildProfessionalCoverLetter(payload = {}) {
+  const fullName = payload.fullName || 'Candidate Name';
+  const companyName = payload.companyName || 'Hiring Organization';
+  const companyAddress = payload.companyAddress || '';
+  const jobTitle = payload.jobTitle || payload.jobTarget || 'Professional Role';
+  const skills = Array.isArray(payload.skills) && payload.skills.length
+    ? payload.skills
+    : ['communication', 'problem solving', 'team collaboration'];
+  const summary = payload.summary || 'I am excited to contribute my experience and dedication to your team.';
+
+  const addressBlock = companyAddress ? `${companyName}\n${companyAddress}` : companyName;
+  return `${fullName}\n\n${addressBlock}\n\nDear Hiring Manager,\n\n${summary} I am excited to apply for the ${jobTitle} position and bring a strong mix of ${skills.join(', ')} to your organization. My background has prepared me to contribute with professionalism, initiative, and measurable impact from the outset.\n\nI would welcome the opportunity to discuss how my experience can support your team and help advance your organization’s goals. Thank you for your time and consideration.\n\nSincerely,\n${fullName}`;
+}
+
 function buildFallbackCoverLetter(context) {
   const fullName = context.fullName || 'Candidate';
   const jobTarget = context.jobTarget || 'Professional role';
   const skills = context.skills.length ? context.skills.join(', ') : 'communication, leadership, and problem solving';
-  return `${fullName}\n\nDear Hiring Manager,\n\nI am excited to apply for the ${jobTarget} role. I bring a strong mix of professionalism, adaptability, and a results-focused mindset that allows me to contribute quickly and add value from day one. My background has equipped me with strengths in ${skills}, and I am confident in my ability to support your team and deliver meaningful results.\n\nI would welcome the opportunity to discuss how my experience and approach can support your organization’s goals. Thank you for your time and consideration.\n\nSincerely,\n${fullName}`;
+  return buildProfessionalCoverLetter({
+    fullName,
+    companyName: context.companyName || 'Hiring Organization',
+    companyAddress: context.companyAddress || '',
+    jobTitle: jobTarget,
+    skills: Array.isArray(context.skills) ? context.skills : [skills],
+    summary: `I am excited to apply for the ${jobTarget} role. I bring a strong mix of professionalism, adaptability, and a results-focused mindset that allows me to contribute quickly and add value from day one. My background has equipped me with strengths in ${skills}, and I am confident in my ability to support your team and deliver meaningful results.`
+  });
 }
 
 function buildFallbackLinkedInSummary(context) {
@@ -89,6 +188,8 @@ export {
   pickFirstDefined,
   normalizeSkills,
   resolveGenerationContext,
+  buildProfessionalCvText,
+  buildProfessionalCoverLetter,
   buildFallbackCoverLetter,
   buildFallbackLinkedInSummary,
   buildFallbackCareerRoadmap,

@@ -815,6 +815,14 @@
 
             <div class="results-tools">
               <h3>Quick Career Assistant</h3>
+              <div class="field-group">
+                <label class="field-label" for="companyName">Company Name</label>
+                <input id="companyName" type="text" placeholder="e.g. Acme Holdings" aria-label="Company name">
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="companyAddress">Company Address</label>
+                <textarea id="companyAddress" rows="3" placeholder="If you know it, add the company address for a more complete cover letter." aria-label="Company address"></textarea>
+              </div>
               <div class="tool-grid">
                 <button id="generateCoverLetterBtn" type="button" class="secondary-btn">Generate Cover Letter</button>
                 <button id="generateInterviewTipsBtn" type="button" class="secondary-btn">Interview Preparation</button>
@@ -979,27 +987,8 @@
             
             <div class="payment-methods">
               <div class="method-section">
-                <h4>Pay with M-Pesa</h4>
-                <div class="field-group">
-                  <label class="field-label" for="mpesaPhone">Phone Number</label>
-                  <input 
-                    type="text" 
-                    id="mpesaPhone" 
-                    placeholder="07XXXXXXXX"
-                    aria-label="M-Pesa phone number"
-                    aria-describedby="mpesaHint"
-                  >
-                  <div class="field-hint" id="mpesaHint">You'll receive an M-Pesa prompt on your phone</div>
-                </div>
-                <button id="payServiceBtn" type="button" class="primary-btn mpesa-btn" disabled aria-label="Pay with M-Pesa">
-                  Pay KES <span id="payAmountM">0</span> with M-Pesa
-                </button>
-              </div>
-              
-              <div class="method-divider">OR</div>
-              
-              <div class="method-section">
                 <h4>Pay with PayPal</h4>
+                <p class="field-hint">This is the recommended checkout for live payments. The PayPal button below will unlock your CV and cover letter immediately after payment.</p>
                 <div id="paypal-button-container"></div>
               </div>
             </div>

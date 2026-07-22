@@ -941,6 +941,8 @@ function setOutputText(text) {
   if (!output) return;
   const safeText = typeof text === 'string' ? text : '';
   output.textContent = safeText || 'Generated content appears here...';
+  output.dataset.locked = hasPaid ? 'false' : 'true';
+  output.style.userSelect = hasPaid ? 'text' : 'none';
 }
 
 async function copyOutput() {
@@ -949,6 +951,11 @@ async function copyOutput() {
   
   if (!text || text === 'Generated content appears here...') {
     showErrorToast('Generate content first before copying');
+    return;
+  }
+
+  if (!hasPaid) {
+    showErrorToast('Payment is required before copying the full CV or cover letter.');
     return;
   }
   
@@ -1151,7 +1158,9 @@ function getCoverLetterPayload() {
     fullName: wizard.fullName || upload.fullName || 'Candidate',
     jobTarget: wizard.careerGoal || upload.targetRole || 'Your target role',
     skills: wizard.skills.length ? wizard.skills : upload.skills,
-    cv: latestCV || upload.existingCv || ''
+    cv: latestCV || upload.existingCv || '',
+    companyName: document.getElementById('companyName')?.value?.trim() || '',
+    companyAddress: document.getElementById('companyAddress')?.value?.trim() || ''
   };
   return payload;
 }
@@ -1174,7 +1183,9 @@ async function handleGenerateCoverLetter() {
         jobTarget: payload.jobTarget,
         careerGoal: payload.jobTarget,
         skills: Array.isArray(payload.skills) ? payload.skills : [payload.skills],
-        cv: payload.cv || latestCV || collectUploadData().existingCv || ''
+        cv: payload.cv || latestCV || collectUploadData().existingCv || '',
+        companyName: payload.companyName,
+        companyAddress: payload.companyAddress
       })
     });
     const result = await response.json();
@@ -1956,9 +1967,9 @@ function setupPaymentListeners() {
     if (totalAmount) totalAmount.textContent = total;
     if (payAmount) payAmount.textContent = total;
     if (payServiceBtn) {
-      payServiceBtn.disabled = total === 0;
-      payServiceBtn.classList.toggle('disabled', total === 0);
-      payServiceBtn.textContent = total === 0 ? 'Pay with M-Pesa' : `Pay KES ${total} with M-Pesa`;
+      payServiceBtn.disabled = true;
+      payServiceBtn.classList.toggle('disabled', true);
+      payServiceBtn.textContent = 'PayPal checkout enabled';
     }
   };
 
@@ -2052,14 +2063,14 @@ async function initPayPalButtonsIfConfigured() {
     if (!config) {
       showPaymentStatus('Unable to load payment settings. Please refresh.', true);
       if (container) {
-        container.innerHTML = '<p class="payment-disabled">Unable to initialize PayPal. Please try again later.</p>';
+        container.innerHTML = '<p class="payment-disabled">PayPal checkout is unavailable right now. Please refresh and try again.</p>';
       }
       return;
     }
 
     if (!config.paypalConfigured || !config.paypalClientId) {
       if (container) {
-        container.innerHTML = '<p class="payment-disabled">PayPal is not configured. Use M-Pesa instead.</p>';
+        container.innerHTML = '<p class="payment-disabled">PayPal is not configured yet. Please contact support to enable checkout.</p>';
       }
       return;
     }
@@ -2073,7 +2084,7 @@ async function initPayPalButtonsIfConfigured() {
     }
   } catch (err) {
     console.error('PayPal initialization error:', err);
-    showPaymentStatus('Failed to load PayPal checkout. Use M-Pesa instead.', true);
+    showPaymentStatus('Failed to load PayPal checkout. Please try again later.', true);
   }
 }
 
