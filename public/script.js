@@ -1,5 +1,5 @@
 import { login, registerUser, logout, onAuthStateChangedListener, getCurrentUser, getFirebaseToken } from './auth.js';
-import { apiUrl, fetchWithAuth, loadAppConfig, loadPayPalSdk, showPaymentStatus, normalizePhoneNumber, updateTotalAmount, downloadTextAsPdf } from './api.js?v=4';
+import { apiUrl, fetchWithAuth, fetchWithAuthAndDebug, loadAppConfig, loadPayPalSdk, showPaymentStatus, normalizePhoneNumber, updateTotalAmount, downloadTextAsPdf } from './api.js?v=4';
 import { requireSignedInUser } from './auth-guard.js';
 import { getCoverLetterPreviewText, truncateToFirstWords, getMpesaPaymentState } from './payment-utils.js';
 
@@ -2106,7 +2106,7 @@ async function initPayPalButtons() {
       showPaymentStatus('Initiating PayPal payment...');
 
       try {
-        const response = await fetchWithAuth('/api/paypal/create-order', {
+        const { response, parsed, text } = await fetchWithAuthAndDebug('/api/paypal/create-order', {
           method: 'POST',
           body: JSON.stringify({
             amount: usdAmount,
@@ -2117,13 +2117,13 @@ async function initPayPalButtons() {
         });
 
         if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          const errorMsg = data.error || data.message || 'PayPal order creation failed';
+          const data = parsed || {};
+          const errorMsg = data.error || data.message || text || 'PayPal order creation failed';
           showPaymentStatus(`PayPal Error: ${errorMsg}`, true);
           throw new Error(errorMsg);
         }
 
-        const data = await response.json().catch(() => ({}));
+        const data = parsed || {};
         if (!data.id) {
           const errorMsg = data.error || 'PayPal did not return an order ID';
           showPaymentStatus(`PayPal Error: ${errorMsg}`, true);

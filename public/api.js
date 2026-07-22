@@ -91,6 +91,18 @@ export async function fetchWithAuth(url, options = {}) {
    return fetch(targetUrl, { ...options, headers });
 }
 
+export async function fetchWithAuthAndDebug(url, options = {}) {
+   const response = await fetchWithAuth(url, options);
+   const text = await response.text();
+   let parsed = null;
+   try {
+      parsed = text ? JSON.parse(text) : null;
+   } catch (e) {
+      parsed = null;
+   }
+   return { response, text, parsed };
+}
+
 export async function loadAppConfig() {
    const baseUrls = [];
    if (isLocalHost()) {
