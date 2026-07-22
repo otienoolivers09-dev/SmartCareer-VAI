@@ -1967,9 +1967,9 @@ function setupPaymentListeners() {
     if (totalAmount) totalAmount.textContent = total;
     if (payAmount) payAmount.textContent = total;
     if (payServiceBtn) {
-      payServiceBtn.disabled = true;
-      payServiceBtn.classList.toggle('disabled', true);
-      payServiceBtn.textContent = 'PayPal checkout enabled';
+      payServiceBtn.disabled = total <= 0;
+      payServiceBtn.classList.toggle('disabled', total <= 0);
+      payServiceBtn.textContent = total > 0 ? 'Pay with M-Pesa' : 'Select a service';
     }
   };
 
@@ -2056,36 +2056,8 @@ async function payWithMpesa() {
 }
 
 async function initPayPalButtonsIfConfigured() {
-  try {
-    const config = await loadAppConfig();
-    const container = document.getElementById('paypal-button-container');
-
-    if (!config) {
-      showPaymentStatus('Unable to load payment settings. Please refresh.', true);
-      if (container) {
-        container.innerHTML = '<p class="payment-disabled">PayPal checkout is unavailable right now. Please refresh and try again.</p>';
-      }
-      return;
-    }
-
-    if (!config.paypalConfigured || !config.paypalClientId) {
-      if (container) {
-        container.innerHTML = '<p class="payment-disabled">PayPal is not configured yet. Please contact support to enable checkout.</p>';
-      }
-      return;
-    }
-
-    if (!window.paypal || typeof window.paypal.Buttons !== 'function') {
-      await loadPayPalSdk(config.paypalClientId);
-    }
-
-    if (window.paypal && typeof window.paypal.Buttons === 'function') {
-      await initPayPalButtons();
-    }
-  } catch (err) {
-    console.error('PayPal initialization error:', err);
-    showPaymentStatus('Failed to load PayPal checkout. Please try again later.', true);
-  }
+  // M-Pesa is the active checkout path for this deployment.
+  return;
 }
 
 async function initPayPalButtons() {

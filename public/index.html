@@ -987,9 +987,13 @@
             
             <div class="payment-methods">
               <div class="method-section">
-                <h4>Pay with PayPal</h4>
-                <p class="field-hint">This is the recommended checkout for live payments. The PayPal button below will unlock your CV and cover letter immediately after payment.</p>
-                <div id="paypal-button-container"></div>
+                <h4>M-Pesa checkout</h4>
+                <p class="field-hint">This checkout is available for Kenya and other regions that use M-Pesa. Enter your phone number and approve the STK push prompt on your phone to unlock your CV and cover letter.</p>
+                <div class="field-group">
+                  <label class="field-label" for="mpesaPhone">M-Pesa phone number</label>
+                  <input id="mpesaPhone" type="tel" inputmode="tel" placeholder="07XXXXXXXX" aria-label="M-Pesa phone number">
+                </div>
+                <button type="button" id="payServiceBtn" class="primary-btn">Pay with M-Pesa</button>
               </div>
             </div>
             
