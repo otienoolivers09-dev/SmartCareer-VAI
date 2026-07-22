@@ -240,7 +240,22 @@ function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || 'https://smart-career-vai.vercel.app,https://smartcareer-vai.onrender.com,https://www.smartcareervai.com,https://smartcareervai.com,https://api.smartcareervai.com,https://*.vercel.app';
+const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || [
+    'https://smart-career-vai.vercel.app',
+    'https://smartcareer-vai.onrender.com',
+    'https://www.smartcareervai.com',
+    'https://smartcareervai.com',
+    'https://api.smartcareervai.com',
+    'https://smartcareervai.onrender.com',
+    'https://*.vercel.app',
+    'https://*.onrender.com',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    'http://localhost:3002',
+    'http://127.0.0.1:3002'
+].join(',');
 const allowedOrigins = rawAllowedOrigins
     .split(',')
     .map(origin => origin.trim())
@@ -260,7 +275,13 @@ const requiredOrigins = [
     'https://api.smartcareervai.com',
     'https://smartcareervai.onrender.com',
     'https://*.vercel.app',
-    'https://*.onrender.com'
+    'https://*.onrender.com',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    'http://localhost:3002',
+    'http://127.0.0.1:3002'
 ];
 requiredOrigins.forEach(origin => {
     if (!allowedOrigins.includes(origin)) {

@@ -1,5 +1,5 @@
 import { login, registerUser, logout, onAuthStateChangedListener, getCurrentUser, getFirebaseToken } from './auth.js';
-import { apiUrl, fetchWithAuth, loadAppConfig, loadPayPalSdk, showPaymentStatus, normalizePhoneNumber, updateTotalAmount, downloadTextAsPdf } from './api.js?v=3';
+import { apiUrl, fetchWithAuth, loadAppConfig, loadPayPalSdk, showPaymentStatus, normalizePhoneNumber, updateTotalAmount, downloadTextAsPdf } from './api.js?v=4';
 import { requireSignedInUser } from './auth-guard.js';
 import { getCoverLetterPreviewText, truncateToFirstWords, getMpesaPaymentState } from './payment-utils.js';
 

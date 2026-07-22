@@ -1,38 +1,44 @@
 import { getFirebaseToken } from './auth.js';
 
 const LOCAL_API_PORTS = [3000, 3001, 3002];
-let API_BASE_URL = (() => {
+
+function getDefaultApiBaseUrl() {
    if (window.__API_BASE_URL) {
       return window.__API_BASE_URL;
    }
-   const host = window.location.hostname;
+
+   const host = (window.location.hostname || '').toLowerCase();
    const isLocal = host === 'localhost' || host === '127.0.0.1' || window.location.protocol === 'file:';
-   
-   // Prefer the current origin when the app and API are served from the same local server.
+
    if (isLocal) {
       return window.location.origin || 'http://localhost:3000';
    }
 
-   // Prefer the current origin for deployed frontend hosts so requests do not fail on an unreachable API hostname.
    const apiHostMap = {
-      'smart-career-vai.vercel.app': window.location.origin,
-      'www.smartcareervai.com': window.location.origin,
-      'smartcareervai.com': window.location.origin,
-      'smartcareer-vai.onrender.com': window.location.origin,
-      'smartcareervai.onrender.com': window.location.origin
+      'smart-career-vai.vercel.app': 'https://api.smartcareervai.com',
+      'www.smartcareervai.com': 'https://api.smartcareervai.com',
+      'smartcareervai.com': 'https://api.smartcareervai.com',
+      'smartcareer-vai.onrender.com': 'https://smartcareer-vai.onrender.com',
+      'smartcareervai.onrender.com': 'https://smartcareervai.onrender.com',
+      'api.smartcareervai.com': 'https://api.smartcareervai.com'
    };
+
    if (apiHostMap[host]) {
       return apiHostMap[host];
    }
 
-   const backendHosts = [
-      'api.smartcareervai.com'
-   ];
-   if (backendHosts.includes(host)) {
-      return window.location.origin;
+   if (host.endsWith('.vercel.app')) {
+      return 'https://api.smartcareervai.com';
    }
+
+   if (host.endsWith('.onrender.com')) {
+      return `https://${host}`;
+   }
+
    return window.location.origin || 'https://api.smartcareervai.com';
-})();
+}
+
+let API_BASE_URL = getDefaultApiBaseUrl();
 
 function isLocalHost() {
    const host = window.location.hostname;
