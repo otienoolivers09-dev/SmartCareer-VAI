@@ -2056,8 +2056,35 @@ async function payWithMpesa() {
 }
 
 async function initPayPalButtonsIfConfigured() {
-  // M-Pesa is the active checkout path for this deployment.
-  return;
+  try {
+    const config = await loadAppConfig();
+    const container = document.getElementById('paypal-button-container');
+
+    if (!config) {
+      if (container) {
+        container.innerHTML = '<p class="payment-disabled">PayPal checkout is unavailable right now. Please refresh and try again.</p>';
+      }
+      return;
+    }
+
+    if (!config.paypalConfigured || !config.paypalClientId) {
+      if (container) {
+        container.innerHTML = '<p class="payment-disabled">PayPal is not configured yet. Please contact support to enable checkout.</p>';
+      }
+      return;
+    }
+
+    if (!window.paypal || typeof window.paypal.Buttons !== 'function') {
+      await loadPayPalSdk(config.paypalClientId);
+    }
+
+    if (window.paypal && typeof window.paypal.Buttons === 'function') {
+      await initPayPalButtons();
+    }
+  } catch (err) {
+    console.error('PayPal initialization error:', err);
+    showPaymentStatus('Failed to load PayPal checkout. Please try again later.', true);
+  }
 }
 
 async function initPayPalButtons() {
