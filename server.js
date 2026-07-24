@@ -247,8 +247,6 @@ const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || [
     'https://smartcareervai.com',
     'https://api.smartcareervai.com',
     'https://smartcareervai.onrender.com',
-    'https://*.vercel.app',
-    'https://*.onrender.com',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://localhost:3001',
@@ -262,8 +260,12 @@ const allowedOrigins = rawAllowedOrigins
     .filter(Boolean);
 
 const defaultLocalOrigins = [
-    'http://localhost:*',
-    'http://127.0.0.1:*'
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    'http://localhost:3002',
+    'http://127.0.0.1:3002'
 ];
 
 const requiredOrigins = [
@@ -273,15 +275,7 @@ const requiredOrigins = [
     'https://www.smartcareervai.com',
     'https://smartcareervai.com',
     'https://api.smartcareervai.com',
-    'https://smartcareervai.onrender.com',
-    'https://*.vercel.app',
-    'https://*.onrender.com',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-    'http://localhost:3002',
-    'http://127.0.0.1:3002'
+    'https://smartcareervai.onrender.com'
 ];
 requiredOrigins.forEach(origin => {
     if (!allowedOrigins.includes(origin)) {
@@ -296,42 +290,25 @@ const allowedOriginPatterns = allowedOrigins.map(origin => {
     return origin;
 });
 
-app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin) {
-            callback(null, true);
-            return;
-        }
+app.use((req, res, next) => {
+    const origin = req.headers.origin || '';
+    const isAllowedOrigin = allowedOrigins.includes(origin) || allowedOriginPatterns.some(pattern => typeof pattern === 'string' ? pattern === origin : pattern.test(origin));
 
-        const isAllowed = allowedOriginPatterns.some(pattern =>
-            typeof pattern === 'string'
-                ? pattern === origin
-                : pattern.test(origin)
-        );
+    if (origin && isAllowedOrigin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
+    }
 
-        if (isAllowed) {
-            callback(null, true);
-            return;
-        }
+    if (req.method === 'OPTIONS') {
+        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-API-Key,Accept,Origin,X-Requested-With');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.status(204).end();
+        return;
+    }
 
-        try {
-            const hostname = new URL(origin).hostname;
-            const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(hostname);
-            if (isLocalHost) {
-                callback(null, true);
-                return;
-            }
-        } catch (e) {
-            // ignore malformed origins and fall through to the error below
-        }
-
-        callback(new Error(`CORS origin not allowed: ${origin}`));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'Accept', 'Origin', 'X-Requested-With'],
-    optionsSuccessStatus: 204
-}));
+    next();
+});
 
 // Request size limits
 // Increase body size limits to allow uploaded CVs / larger payloads while still protecting other endpoints.

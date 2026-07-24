@@ -469,6 +469,11 @@ function showAppPage(sectionId) {
       el.classList.toggle('hidden', id !== sectionId);
     }
   });
+
+  const paymentCard = document.querySelector('.payment-card');
+  if (paymentCard && sectionId === 'resultsSection') {
+    paymentCard.classList.remove('hidden');
+  }
 }
 
 function showLandingPage() {
@@ -503,7 +508,9 @@ function showWizardSection() {
 
 function showResultsSection() {
   const appSection = document.getElementById('appSection');
+  const resultsSection = document.getElementById('resultsSection');
   if (appSection) appSection.classList.remove('hidden');
+  if (resultsSection) resultsSection.classList.remove('hidden');
   showAppPage('resultsSection');
   setActiveResultsTab('cv');
 }

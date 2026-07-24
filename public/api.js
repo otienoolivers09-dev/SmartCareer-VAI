@@ -1,4 +1,5 @@
 import { getFirebaseToken } from './auth.js';
+import { resolveApiBaseUrl, getDefaultApiCandidates } from './api-config.js';
 
 const LOCAL_API_PORTS = [3000, 3001, 3002];
 
@@ -7,35 +8,11 @@ function getDefaultApiBaseUrl() {
       return window.__API_BASE_URL;
    }
 
-   const host = (window.location.hostname || '').toLowerCase();
-   const isLocal = host === 'localhost' || host === '127.0.0.1' || window.location.protocol === 'file:';
-
-   if (isLocal) {
-      return window.location.origin || 'http://localhost:3000';
-   }
-
-   const apiHostMap = {
-      'smart-career-vai.vercel.app': 'https://api.smartcareervai.com',
-      'www.smartcareervai.com': 'https://api.smartcareervai.com',
-      'smartcareervai.com': 'https://api.smartcareervai.com',
-      'smartcareer-vai.onrender.com': 'https://smartcareer-vai.onrender.com',
-      'smartcareervai.onrender.com': 'https://smartcareervai.onrender.com',
-      'api.smartcareervai.com': 'https://api.smartcareervai.com'
-   };
-
-   if (apiHostMap[host]) {
-      return apiHostMap[host];
-   }
-
-   if (host.endsWith('.vercel.app')) {
-      return 'https://api.smartcareervai.com';
-   }
-
-   if (host.endsWith('.onrender.com')) {
-      return `https://${host}`;
-   }
-
-   return window.location.origin || 'https://api.smartcareervai.com';
+   return resolveApiBaseUrl({
+      hostname: window.location.hostname,
+      protocol: window.location.protocol,
+      origin: window.location.origin
+   });
 }
 
 let API_BASE_URL = getDefaultApiBaseUrl();
@@ -46,17 +23,11 @@ function isLocalHost() {
 }
 
 function getLocalApiCandidates() {
-   const hosts = ['http://localhost', 'http://127.0.0.1'];
-   const ports = [3000, 3001, 3002, 3003, 3004, 3005];
-   const candidates = [];
-
-   hosts.forEach(host => {
-      ports.forEach(port => {
-         candidates.push(`${host}:${port}`);
-      });
+   return getDefaultApiCandidates({
+      hostname: window.location.hostname,
+      protocol: window.location.protocol,
+      origin: window.location.origin
    });
-
-   return candidates;
 }
 
 function normalizeBaseUrl(url) {
@@ -79,6 +50,42 @@ async function tryLoadConfig(baseUrl) {
    return config;
 }
 
+async function ensureApiBaseUrl() {
+   if (!API_BASE_URL || API_BASE_URL.includes('localhost')) {
+      const candidates = [];
+      if (window.__API_BASE_URL) {
+         candidates.push(window.__API_BASE_URL);
+      }
+      const currentOrigin = window.location.origin;
+      if (currentOrigin && !candidates.includes(currentOrigin)) {
+         candidates.push(currentOrigin);
+      }
+      getDefaultApiCandidates({
+         hostname: window.location.hostname,
+         protocol: window.location.protocol,
+         origin: window.location.origin
+      }).forEach(candidate => {
+         if (!candidates.includes(candidate)) {
+            candidates.push(candidate);
+         }
+      });
+
+      for (const candidate of candidates) {
+         try {
+            const response = await fetch(`${normalizeBaseUrl(candidate)}/config`, { cache: 'no-store' });
+            if (response.ok) {
+               API_BASE_URL = normalizeBaseUrl(candidate);
+               return API_BASE_URL;
+            }
+         } catch (err) {
+            console.warn(`Unable to verify API base URL ${candidate}:`, err.message);
+         }
+      }
+   }
+
+   return API_BASE_URL;
+}
+
 export async function fetchWithAuth(url, options = {}) {
    const token = await getFirebaseToken();
    const headers = {
@@ -86,7 +93,8 @@ export async function fetchWithAuth(url, options = {}) {
       ...options.headers
    };
    if (token) headers.Authorization = `Bearer ${token}`;
-   const targetUrl = apiUrl(url);
+   const baseUrl = await ensureApiBaseUrl();
+   const targetUrl = `${normalizeBaseUrl(baseUrl)}${url}`;
    console.log('API request ->', targetUrl);
    return fetch(targetUrl, { ...options, headers });
 }
